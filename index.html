@@ -1302,42 +1302,110 @@
         }
 
         // ===== VALIDATE PROXY FORMAT =====
-        function isValidProxy(line) {
-            const trimmed = line.trim();
-            if (!trimmed) return false;
-            
-            // Format 1: user:pass@IP:PORT
-            if (/^[^:]+:[^@]+@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$/.test(trimmed)) {
+       function isValidProxy(line) {
+    const trimmed = line.trim();
+    if (!trimmed) return false;
+    
+    // ============================================================
+    // FORMAT 1: user:pass@host:port (with IP or Domain)
+    // Examples: 
+    //   d1lgsabwmptd:9ki0plorgc80q50@216.26.231.190:3129
+    //   user:pass@proxy.example.com:8080
+    // ============================================================
+    if (/^[^:]+:[^@]+@[a-zA-Z0-9\-\.]+:\d+$/.test(trimmed)) {
+        return true;
+    }
+    
+    // ============================================================
+    // FORMAT 2: host:port:user:pass (host can be IP or Domain)
+    // Examples:
+    //   216.26.231.190:3129:user:pass
+    //   proxy.example.com:8080:user:pass
+    // ============================================================
+    const parts = trimmed.split(':');
+    if (parts.length === 4) {
+        const host = parts[0];
+        const port = parts[1];
+        
+        // Check if host is valid IP OR valid Domain
+        const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+        const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
+        
+        if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) {
+            return true;
+        }
+    }
+    
+    // ============================================================
+    // FORMAT 3: host:port (with IP or Domain)
+    // Examples:
+    //   216.26.231.190:3129
+    //   proxy.example.com:8080
+    // ============================================================
+    if (parts.length === 2) {
+        const host = parts[0];
+        const port = parts[1];
+        
+        const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+        const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
+        
+        if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) {
+            return true;
+        }
+    }
+    
+    // ============================================================
+    // FORMAT 4: host:port@user:pass (rare but supported)
+    // Example: proxy.example.com:8080@user:pass
+    // ============================================================
+    if (trimmed.includes('@')) {
+        const atParts = trimmed.split('@');
+        if (atParts.length === 2) {
+            const hostPort = atParts[0];
+            const userPass = atParts[1];
+            const hpParts = hostPort.split(':');
+            const upParts = userPass.split(':');
+            if (hpParts.length === 2 && upParts.length === 2) {
+                const host = hpParts[0];
+                const port = hpParts[1];
+                const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+                const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
+                if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    // ============================================================
+    // FORMAT 5: With protocol prefix
+    // Examples:
+    //   socks5://user:pass@host:port
+    //   http://host:port
+    //   https://host:port
+    // ============================================================
+    const protoMatch = trimmed.match(/^(socks5|socks4|http|https):\/\/(.+)$/i);
+    if (protoMatch) {
+        const rest = protoMatch[2];
+        // Check if it's user:pass@host:port
+        if (/^[^:]+:[^@]+@[a-zA-Z0-9\-\.]+:\d+$/.test(rest)) {
+            return true;
+        }
+        // Check if it's just host:port
+        const restParts = rest.split(':');
+        if (restParts.length === 2) {
+            const host = restParts[0];
+            const port = restParts[1];
+            const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+            const isDomain = /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/.test(host);
+            if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) {
                 return true;
             }
-            
-            // Format 2: IP:PORT:USER:PASS
-            const parts = trimmed.split(':');
-            if (parts.length === 4) {
-                const ip = parts[0];
-                const port = parts[1];
-                const ipParts = ip.split('.');
-                if (ipParts.length === 4 && ipParts.every(p => !isNaN(p) && p >= 0 && p <= 255)) {
-                    if (!isNaN(port) && port > 0 && port < 65536) {
-                        return true;
-                    }
-                }
-            }
-            
-            // Format 3: IP:PORT
-            if (parts.length === 2) {
-                const ip = parts[0];
-                const port = parts[1];
-                const ipParts = ip.split('.');
-                if (ipParts.length === 4 && ipParts.every(p => !isNaN(p) && p >= 0 && p <= 255)) {
-                    if (!isNaN(port) && port > 0 && port < 65536) {
-                        return true;
-                    }
-                }
-            }
-            
-            return false;
         }
+    }
+    
+    return false;
+}
 
         // ===== MASK CARD =====
         function maskCard(card) {
