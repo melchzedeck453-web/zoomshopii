@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,6 +60,13 @@
 
         .logo-section {
             display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+
+        .logo-section .logo-top {
+            display: flex;
             align-items: center;
             gap: 15px;
         }
@@ -84,6 +90,14 @@
             padding: 2px 10px;
             border-radius: 4px;
             border: 1px solid var(--border-color);
+        }
+
+        .logo-sub {
+            font-size: 0.55rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            opacity: 0.7;
+            margin-left: 2px;
         }
 
         .stats-bar {
@@ -469,22 +483,114 @@
         }
         tr:hover td { background: var(--bg-card); }
 
+        /* ===== SITE/PROXY LIST - PROPER ALIGNMENT ===== */
         .list-container {
             max-height: 400px;
             overflow-y: auto;
             background: var(--bg-card);
             border-radius: 8px;
-            padding: 10px;
             border: 1px solid var(--border-color);
+            padding: 0;
         }
-        .list-item {
-            padding: 5px 10px;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 0.8rem;
+
+        .list-header {
+            display: grid;
+            grid-template-columns: 50px 1fr 1.2fr;
+            padding: 8px 12px;
+            border-bottom: 2px solid var(--border-color);
+            font-weight: bold;
+            color: var(--neon-green);
+            font-size: 0.7rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 1;
+        }
+        .list-header .col-num { text-align: center; }
+        .list-header .col-left { text-align: left; padding-right: 10px; }
+        .list-header .col-right {
+            text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .list-header .col-right .h-status { min-width: 60px; text-align: right; }
+        .list-header .col-right .h-latency { min-width: 60px; text-align: right; }
+        .list-header .col-right .h-added { min-width: 80px; text-align: right; }
+        .list-header .col-right .h-actions { min-width: 50px; text-align: right; }
+
+        .list-item-row {
+            display: grid;
+            grid-template-columns: 50px 1fr 1.2fr;
+            padding: 6px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.72rem;
+            align-items: center;
+        }
+        .list-item-row:hover {
+            background: rgba(0, 255, 65, 0.03);
+        }
+        .list-item-row .row-num {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.65rem;
+        }
+        .list-item-row .row-left {
+            text-align: left;
+            color: var(--text-white);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-right: 10px;
+        }
+        .list-item-row .row-right {
+            text-align: right;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            flex-shrink: 0;
             color: var(--text-gray);
         }
-        .list-item .live { color: var(--neon-green); }
-        .list-item .dead { color: var(--neon-red); }
+        .list-item-row .row-right .r-status {
+            min-width: 60px;
+            text-align: right;
+            font-weight: bold;
+        }
+        .list-item-row .row-right .r-latency {
+            min-width: 60px;
+            text-align: right;
+        }
+        .list-item-row .row-right .r-added {
+            min-width: 80px;
+            text-align: right;
+        }
+        .list-item-row .row-right .r-actions {
+            min-width: 50px;
+            text-align: right;
+            display: flex;
+            gap: 4px;
+            justify-content: flex-end;
+        }
+        .list-item-row .row-right .status-alive { color: var(--neon-green); }
+        .list-item-row .row-right .status-dead { color: var(--neon-red); }
+        .list-item-row .row-right .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+        .list-item-row .row-right .btn-retest { color: var(--neon-blue); }
+        .list-item-row .row-right .btn-retest:hover { background: rgba(0, 212, 255, 0.15); }
+        .list-item-row .row-right .btn-remove { color: var(--neon-red); }
+        .list-item-row .row-right .btn-remove:hover { background: rgba(255, 0, 51, 0.15); }
 
         .manager-section {
             display: grid;
@@ -717,6 +823,11 @@
             .header { flex-direction: column; align-items: stretch; }
             .logo-section h1 { font-size: 1.5rem; }
             .dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+            .list-header, .list-item-row {
+                grid-template-columns: 30px 1fr 1.5fr;
+                font-size: 0.65rem;
+            }
+            .list-item-row .row-right { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
         }
 
         @media (max-width: 480px) {
@@ -728,6 +839,17 @@
             .result-item { flex-wrap: wrap; gap: 4px; }
             .btn-group { flex-direction: column; }
             .progress-filter-container { flex-wrap: wrap; }
+            .list-header, .list-item-row {
+                grid-template-columns: 25px 1fr 1.5fr;
+                font-size: 0.6rem;
+                padding: 4px 8px;
+            }
+            .list-item-row .row-right { gap: 4px; font-size: 0.6rem; }
+            .list-item-row .row-right .r-status { min-width: 40px; }
+            .list-item-row .row-right .r-latency { min-width: 40px; }
+            .list-item-row .row-right .r-added { min-width: 50px; }
+            .list-item-row .row-right .r-actions { min-width: 40px; }
+            .list-item-row .row-right .btn-icon { font-size: 0.7rem; }
         }
     </style>
 </head>
@@ -750,8 +872,11 @@
         <!-- HEADER -->
         <header class="header">
             <div class="logo-section">
-                <h1>ZOOM SHOPII</h1>
-                <span class="version">v2.0</span>
+                <div class="logo-top">
+                    <h1>ZOOM SHOPII</h1>
+                    <span class="version">v2.0</span>
+                </div>
+                <div class="logo-sub">BY MELCHZEDECK</div>
             </div>
             <div class="stats-bar">
                 <div class="stat-item">
@@ -1176,7 +1301,45 @@
             saveState();
         }
 
-        // ===== MASK CARD (ONLY FOR DISPLAY, NOT FOR HITS) =====
+        // ===== VALIDATE PROXY FORMAT =====
+        function isValidProxy(line) {
+            const trimmed = line.trim();
+            if (!trimmed) return false;
+            
+            // Format 1: user:pass@IP:PORT
+            if (/^[^:]+:[^@]+@\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$/.test(trimmed)) {
+                return true;
+            }
+            
+            // Format 2: IP:PORT:USER:PASS
+            const parts = trimmed.split(':');
+            if (parts.length === 4) {
+                const ip = parts[0];
+                const port = parts[1];
+                const ipParts = ip.split('.');
+                if (ipParts.length === 4 && ipParts.every(p => !isNaN(p) && p >= 0 && p <= 255)) {
+                    if (!isNaN(port) && port > 0 && port < 65536) {
+                        return true;
+                    }
+                }
+            }
+            
+            // Format 3: IP:PORT
+            if (parts.length === 2) {
+                const ip = parts[0];
+                const port = parts[1];
+                const ipParts = ip.split('.');
+                if (ipParts.length === 4 && ipParts.every(p => !isNaN(p) && p >= 0 && p <= 255)) {
+                    if (!isNaN(port) && port > 0 && port < 65536) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        // ===== MASK CARD =====
         function maskCard(card) {
             if (!card) return '****';
             const str = String(card).replace(/\s/g, '');
@@ -1243,23 +1406,119 @@
             `).join('');
         }
 
+        // ===== RENDER SITES WITH NUMBERS AND HEADERS =====
         function renderSites() {
             if (state.sites.length === 0) {
                 els.siteList.innerHTML = '<div class="list-item" style="color:var(--text-dim);">No sites uploaded yet</div>';
                 els.liveSiteCount.textContent = '0';
                 return;
             }
-            els.siteList.innerHTML = state.sites.map(s => `<div class="list-item"><span class="live">●</span> ${s}</div>`).join('');
+            
+            let html = `
+                <div class="list-header">
+                    <span class="col-num">#</span>
+                    <span class="col-left">Site URL</span>
+                    <span class="col-right">
+                        <span class="h-status">Status</span>
+                        <span class="h-latency">Price</span>
+                        <span class="h-added">Added</span>
+                        <span class="h-actions"></span>
+                    </span>
+                </div>
+            `;
+            
+            state.sites.forEach((s, index) => {
+                let siteUrl = s;
+                let status = 'ALIVE';
+                let price = '0.00';
+                let added = new Date().toLocaleDateString();
+                
+                if (typeof s === 'object') {
+                    siteUrl = s.url || s;
+                    status = s.status || 'ALIVE';
+                    price = s.price || '0.00';
+                    added = s.added || new Date().toLocaleDateString();
+                }
+                
+                const statusClass = status === 'ALIVE' ? 'status-alive' : 'status-dead';
+                const displayUrl = siteUrl.length > 40 ? siteUrl.slice(0, 40) + '...' : siteUrl;
+                
+                html += `
+                    <div class="list-item-row">
+                        <span class="row-num">${index + 1}</span>
+                        <span class="row-left" title="${siteUrl}">${displayUrl}</span>
+                        <span class="row-right">
+                            <span class="r-status ${statusClass}">${status}</span>
+                            <span class="r-latency">$${price}</span>
+                            <span class="r-added">${added}</span>
+                            <span class="r-actions">
+                                <button class="btn-icon btn-retest" onclick="retestSite(${index})" title="Retest site">🔄</button>
+                                <button class="btn-icon btn-remove" onclick="removeSite(${index})" title="Remove site">❌</button>
+                            </span>
+                        </span>
+                    </div>
+                `;
+            });
+            
+            els.siteList.innerHTML = html;
             els.liveSiteCount.textContent = state.sites.length;
         }
 
+        // ===== RENDER PROXIES WITH NUMBERS AND HEADERS =====
         function renderProxies() {
             if (state.proxies.length === 0) {
                 els.proxyList.innerHTML = '<div class="list-item" style="color:var(--text-dim);">No proxies uploaded yet</div>';
                 els.liveProxyCount.textContent = '0';
                 return;
             }
-            els.proxyList.innerHTML = state.proxies.map(p => `<div class="list-item"><span class="live">●</span> ${p}</div>`).join('');
+            
+            let html = `
+                <div class="list-header">
+                    <span class="col-num">#</span>
+                    <span class="col-left">Proxy</span>
+                    <span class="col-right">
+                        <span class="h-status">Status</span>
+                        <span class="h-latency">Latency</span>
+                        <span class="h-added">Added</span>
+                        <span class="h-actions"></span>
+                    </span>
+                </div>
+            `;
+            
+            state.proxies.forEach((p, index) => {
+                let proxyStr = p;
+                let status = 'ALIVE';
+                let latency = 'N/A';
+                let added = new Date().toLocaleDateString();
+                
+                if (typeof p === 'object') {
+                    proxyStr = p.proxy || p;
+                    status = p.status || 'ALIVE';
+                    latency = p.latency || 'N/A';
+                    added = p.added || new Date().toLocaleDateString();
+                }
+                
+                const statusClass = status === 'ALIVE' ? 'status-alive' : 'status-dead';
+                const displayProxy = proxyStr.length > 40 ? proxyStr.slice(0, 40) + '...' : proxyStr;
+                
+                html += `
+                    <div class="list-item-row">
+                        <span class="row-num">${index + 1}</span>
+                        <span class="row-left" title="${proxyStr}">${displayProxy}</span>
+                        <span class="row-right">
+                            <span class="r-status ${statusClass}">${status}</span>
+                            <span class="r-latency">${latency}</span>
+                            <span class="r-added">${added}</span>
+                            <span class="r-actions">
+                                <button class="btn-icon btn-retest" onclick="retestProxy(${index})" title="Retest proxy">🔄</button>
+                                <button class="btn-icon btn-remove" onclick="removeProxy(${index})" title="Remove proxy">❌</button>
+                            </span>
+                        </span>
+                    </div>
+                `;
+            });
+            
+            els.proxyList.innerHTML = html;
             els.liveProxyCount.textContent = state.proxies.length;
         }
 
@@ -1286,6 +1545,63 @@
             els.massChargedFilterCount.textContent = charged;
             els.massApprovedFilterCount.textContent = approved;
             els.massDeclinedFilterCount.textContent = declined;
+        }
+
+        // ===== SITE ACTIONS =====
+        function removeSite(index) {
+            state.sites.splice(index, 1);
+            renderSites();
+            updateStats();
+        }
+
+        async function retestSite(index) {
+            const site = state.sites[index];
+            if (!site) return;
+            
+            if (state.proxies.length === 0) {
+                alert('❌ No proxies available to test!');
+                return;
+            }
+            
+            const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+            const result = await testSiteWithPrice(site, proxy);
+            
+            if (result.status === 'alive') {
+                state.sites[index] = { url: site, status: 'ALIVE', price: result.price.toFixed(2), added: new Date().toLocaleDateString() };
+                alert('✅ Site is ALIVE! Price: $' + result.price.toFixed(2));
+            } else {
+                state.sites[index] = { url: site, status: 'DEAD', price: '0.00', added: new Date().toLocaleDateString() };
+                alert('❌ Site is DEAD!');
+            }
+            renderSites();
+            updateStats();
+        }
+
+        // ===== PROXY ACTIONS =====
+        function removeProxy(index) {
+            state.proxies.splice(index, 1);
+            renderProxies();
+            updateStats();
+        }
+
+        async function retestProxy(index) {
+            const proxy = state.proxies[index];
+            if (!proxy) return;
+            
+            const startTime = performance.now();
+            const result = await testProxy(proxy);
+            const endTime = performance.now();
+            const latency = (endTime - startTime).toFixed(1);
+            
+            if (result.status === 'alive') {
+                state.proxies[index] = { proxy: proxy, status: 'ALIVE', latency: latency + 'ms', added: new Date().toLocaleDateString() };
+                alert('✅ Proxy is ALIVE! Latency: ' + latency + 'ms');
+            } else {
+                state.proxies[index] = { proxy: proxy, status: 'DEAD', latency: 'N/A', added: new Date().toLocaleDateString() };
+                alert('❌ Proxy is DEAD!');
+            }
+            renderProxies();
+            updateStats();
         }
 
         // ===== VALIDATE CARD =====
@@ -1508,7 +1824,7 @@
             }
         }
 
-        // ===== CHECK CARD WITH RETRY (ULTRA FAST) =====
+        // ===== CHECK CARD WITH RETRY =====
         async function checkCardWithRetry(card, maxRetries = 2) {
             if (state.sites.length === 0) {
                 return { status: 'Dead', message: 'No sites available', card: card, gateway: 'Unknown', price: '-', price_value: 0 };
@@ -1674,7 +1990,7 @@
         // ================================================================
         async function processQuickCheck() {
             const total = quickCardsList.length;
-            const batchSize = 100; // 🔥 ULTRA FAST - 100 at a time
+            const batchSize = 100;
             
             for (let i = quickCurrentIndex; i < total; i += batchSize) {
                 if (quickStopRequested || quickPaused) {
@@ -1866,7 +2182,7 @@
         // ================================================================
         async function processMassCheck() {
             const total = massCardsList.length;
-            const batchSize = 200; // 🔥 ULTRA FAST - 200 at a time
+            const batchSize = 200;
             
             for (let i = massCurrentIndex; i < total; i += batchSize) {
                 if (massStopRequested || massPaused) {
@@ -2157,7 +2473,7 @@
         });
 
         // ================================================================
-        // SITE MANAGER
+        // SITE MANAGER - UPDATED WITH OBJECTS
         // ================================================================
 
         els.uploadSitesBtn.addEventListener('click', function() {
@@ -2166,8 +2482,14 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const urls = e.target.result.split('\n').map(u => u.trim()).filter(u => u);
-                state.sites = [...state.sites, ...urls];
-                state.sites = [...new Set(state.sites)];
+                const newSites = urls.map(url => ({
+                    url: url,
+                    status: 'ALIVE',
+                    price: '0.00',
+                    added: new Date().toLocaleDateString()
+                }));
+                state.sites = [...state.sites, ...newSites];
+                state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
                 renderSites();
                 updateStats();
                 alert(`✅ ${urls.length} sites added! Total: ${state.sites.length}`);
@@ -2180,8 +2502,14 @@
             const text = els.manualSites.value;
             if (!text.trim()) { alert('Please paste some sites'); return; }
             const urls = text.split('\n').map(u => u.trim()).filter(u => u);
-            state.sites = [...state.sites, ...urls];
-            state.sites = [...new Set(state.sites)];
+            const newSites = urls.map(url => ({
+                url: url,
+                status: 'ALIVE',
+                price: '0.00',
+                added: new Date().toLocaleDateString()
+            }));
+            state.sites = [...state.sites, ...newSites];
+            state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
             renderSites();
             updateStats();
             alert(`✅ ${urls.length} sites added! Total: ${state.sites.length}`);
@@ -2201,10 +2529,16 @@
             const aliveSites = [];
 
             for (const site of state.sites) {
+                const siteUrl = typeof site === 'object' ? site.url : site;
                 const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
-                const result = await testSiteWithPrice(site, proxy);
+                const result = await testSiteWithPrice(siteUrl, proxy);
                 if (result.status === 'alive') {
-                    aliveSites.push(site);
+                    aliveSites.push({ 
+                        url: siteUrl, 
+                        status: 'ALIVE', 
+                        price: result.price ? result.price.toFixed(2) : '0.00',
+                        added: new Date().toLocaleDateString()
+                    });
                     alive++;
                 } else {
                     dead++;
@@ -2250,7 +2584,7 @@
         });
 
         // ================================================================
-        // PROXY MANAGER
+        // PROXY MANAGER - UPDATED WITH VALIDATION
         // ================================================================
 
         els.uploadProxiesBtn.addEventListener('click', function() {
@@ -2258,12 +2592,32 @@
             if (!file) { alert('Please select a .txt file'); return; }
             const reader = new FileReader();
             reader.onload = function(e) {
-                const proxies = e.target.result.split('\n').map(p => p.trim()).filter(p => p);
-                state.proxies = [...state.proxies, ...proxies];
-                state.proxies = [...new Set(state.proxies)];
+                const lines = e.target.result.split('\n').map(p => p.trim()).filter(p => p);
+                
+                // 🔥 FILTER: Only keep valid proxy lines
+                const validProxies = lines.filter(line => isValidProxy(line));
+                const invalidCount = lines.length - validProxies.length;
+                
+                if (validProxies.length === 0) {
+                    alert('❌ No valid proxies found in file! Valid format: user:pass@IP:PORT or IP:PORT:USER:PASS');
+                    return;
+                }
+                
+                if (invalidCount > 0) {
+                    alert(`⚠️ Found ${validProxies.length} valid proxies, ${invalidCount} invalid lines ignored.`);
+                }
+                
+                const newProxies = validProxies.map(proxy => ({
+                    proxy: proxy,
+                    status: 'ALIVE',
+                    latency: 'N/A',
+                    added: new Date().toLocaleDateString()
+                }));
+                state.proxies = [...state.proxies, ...newProxies];
+                state.proxies = [...new Map(state.proxies.map(item => [item.proxy, item])).values()];
                 renderProxies();
                 updateStats();
-                alert(`✅ ${proxies.length} proxies added! Total: ${state.proxies.length}`);
+                alert(`✅ ${validProxies.length} proxies added! Total: ${state.proxies.length}`);
                 els.proxyFileInput.value = '';
             };
             reader.readAsText(file);
@@ -2272,12 +2626,32 @@
         els.addManualProxiesBtn.addEventListener('click', function() {
             const text = els.manualProxies.value;
             if (!text.trim()) { alert('Please paste some proxies'); return; }
-            const proxies = text.split('\n').map(p => p.trim()).filter(p => p);
-            state.proxies = [...state.proxies, ...proxies];
-            state.proxies = [...new Set(state.proxies)];
+            const lines = text.split('\n').map(p => p.trim()).filter(p => p);
+            
+            // 🔥 FILTER: Only keep valid proxy lines
+            const validProxies = lines.filter(line => isValidProxy(line));
+            const invalidCount = lines.length - validProxies.length;
+            
+            if (validProxies.length === 0) {
+                alert('❌ No valid proxies found! Valid format: user:pass@IP:PORT or IP:PORT:USER:PASS');
+                return;
+            }
+            
+            if (invalidCount > 0) {
+                alert(`⚠️ Found ${validProxies.length} valid proxies, ${invalidCount} invalid lines ignored.`);
+            }
+            
+            const newProxies = validProxies.map(proxy => ({
+                proxy: proxy,
+                status: 'ALIVE',
+                latency: 'N/A',
+                added: new Date().toLocaleDateString()
+            }));
+            state.proxies = [...state.proxies, ...newProxies];
+            state.proxies = [...new Map(state.proxies.map(item => [item.proxy, item])).values()];
             renderProxies();
             updateStats();
-            alert(`✅ ${proxies.length} proxies added! Total: ${state.proxies.length}`);
+            alert(`✅ ${validProxies.length} proxies added! Total: ${state.proxies.length}`);
             els.manualProxies.value = '';
         });
 
@@ -2293,9 +2667,15 @@
             const aliveProxies = [];
 
             for (const proxy of state.proxies) {
-                const result = await testProxy(proxy);
+                const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+                const result = await testProxy(proxyStr);
                 if (result.status === 'alive') {
-                    aliveProxies.push(proxy);
+                    aliveProxies.push({
+                        proxy: proxyStr,
+                        status: 'ALIVE',
+                        latency: 'N/A',
+                        added: new Date().toLocaleDateString()
+                    });
                     alive++;
                 } else {
                     dead++;
@@ -2399,4 +2779,3 @@
 
 </body>
 </html>
-
