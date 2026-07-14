@@ -2805,69 +2805,64 @@
         });
 
         // 🔥 FIXED: Check sites and remove dead ones IMMEDIATELY
-        els.checkSitesBtn.addEventListener('click', async function() {
-            if (state.sites.length === 0) { alert('No sites to check!'); return; }
-            if (state.proxies.length === 0) { alert('❌ No proxies available!'); return; }
+       els.checkSitesBtn.addEventListener('click', async function() {
+    if (state.sites.length === 0) { alert('No sites to check!'); return; }
+    if (state.proxies.length === 0) { alert('❌ No proxies available!'); return; }
 
-            this.disabled = true;
-            this.textContent = '⏳ Checking...';
-            els.siteCheckProgress.style.display = 'block';
+    this.disabled = true;
+    this.textContent = '⏳ Checking...';
+    els.siteCheckProgress.style.display = 'block';
 
-            const total = state.sites.length;
-            let checked = 0, alive = 0, dead = 0;
-            
-            // Build a new array as we go, removing dead sites immediately
-            let workingSites = [];
+    const total = state.sites.length;
+    let checked = 0, alive = 0, dead = 0;
+    
+    // 🔥 FIX: Loop BACKWARDS so we can remove from the SAME list safely
+    for (let i = state.sites.length - 1; i >= 0; i--) {
+        const site = state.sites[i];
+        const siteUrl = typeof site === 'object' ? site.url : site;
+        const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+        const result = await testSiteWithPrice(siteUrl, proxy);
+        
+        checked++;
+        
+        if (result.status === 'alive') {
+            alive++;
+            // ✅ Site is alive - keep it in the list (do nothing)
+        } else {
+            dead++;
+            // 🔥 IMMEDIATELY REMOVE the dead site from the SAME list
+            state.sites.splice(i, 1);
+            renderSites();   // Update UI immediately
+            updateStats();    // Update stats immediately
+        }
+        
+        const pct = Math.round((checked / total) * 100);
+        els.siteCheckStatus.textContent = pct + '%';
+        els.siteCheckFill.style.width = pct + '%';
+        els.siteCheckChecked.textContent = checked;
+        els.siteCheckAlive.textContent = alive;
+        els.siteCheckDead.textContent = dead;
+        els.siteCheckTotal.textContent = total;
+        await new Promise(r => setTimeout(r, 30));
+    }
 
-            for (const site of state.sites) {
-                const siteUrl = typeof site === 'object' ? site.url : site;
-                const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
-                const result = await testSiteWithPrice(siteUrl, proxy);
-                
-                if (result.status === 'alive') {
-                    workingSites.push({ 
-                        url: siteUrl, 
-                        status: 'ALIVE', 
-                        price: result.price ? result.price.toFixed(2) : '0.00',
-                        added: new Date().toLocaleDateString()
-                    });
-                    alive++;
-                } else {
-                    dead++;
-                    // 🔥 IMMEDIATELY update state.sites to the working list so far
-                    state.sites = workingSites;
-                    renderSites();
-                    updateStats();
-                }
-                checked++;
-                const pct = Math.round((checked / total) * 100);
-                els.siteCheckStatus.textContent = pct + '%';
-                els.siteCheckFill.style.width = pct + '%';
-                els.siteCheckChecked.textContent = checked;
-                els.siteCheckAlive.textContent = alive;
-                els.siteCheckDead.textContent = dead;
-                els.siteCheckTotal.textContent = total;
-                await new Promise(r => setTimeout(r, 30));
-            }
+    // Final update - state.sites already has only alive sites
+    renderSites();
+    updateStats();
 
-            // Final update: set state to workingSites (all alive sites)
-            state.sites = workingSites;
-            renderSites();
-            updateStats();
+    els.siteCheckStatus.textContent = '✅ Complete!';
+    els.siteCheckFill.style.width = '100%';
+    setTimeout(() => {
+        els.siteCheckProgress.style.display = 'none';
+        els.siteCheckStatus.textContent = '0%';
+        els.siteCheckFill.style.width = '0%';
+    }, 3000);
 
-            els.siteCheckStatus.textContent = '✅ Complete!';
-            els.siteCheckFill.style.width = '100%';
-            setTimeout(() => {
-                els.siteCheckProgress.style.display = 'none';
-                els.siteCheckStatus.textContent = '0%';
-                els.siteCheckFill.style.width = '0%';
-            }, 3000);
-
-            this.disabled = false;
-            this.textContent = '🔍 Check & Remove Dead';
-            logDebug(`✅ Site check: ${alive} alive, ${dead} removed (removed as we went)`, 'success');
-            alert(`✅ Done! ${alive} sites alive, ${dead} removed.`);
-        });
+    this.disabled = false;
+    this.textContent = '🔍 Check & Remove Dead';
+    logDebug(`✅ Site check: ${alive} alive, ${dead} removed from original list`, 'success');
+    alert(`✅ Done! ${alive} sites alive, ${dead} removed from your list.`);
+});
 
         els.clearSitesBtn.addEventListener('click', function() {
             if (state.sites.length === 0) { alert('No sites to clear'); return; }
