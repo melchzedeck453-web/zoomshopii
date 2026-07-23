@@ -1450,62 +1450,6 @@ async function testProxy(proxy) {
         return { proxy: proxyStr, status: 'dead', error: error.message };
     }
 }
-
-        // ===== FIXED: TEST SINGLE PROXY =====
-async function testSingleProxy(proxy) {
-    try {
-        let proxyStr = proxy;
-        if (typeof proxy === 'object' && proxy !== null) {
-            proxyStr = proxy.proxy || proxy.toString();
-        }
-        if (typeof proxyStr !== 'string') {
-            proxyStr = String(proxyStr);
-        }
-        
-        const parts = proxyStr.split(':');
-        let proxyUrl = null;
-        
-        if (parts.length === 4) {
-            const [ip, port, user, password] = parts;
-            proxyUrl = `http://${user}:${password}@${ip}:${port}`;
-        } else if (parts.length === 2) {
-            const [ip, port] = parts;
-            proxyUrl = `http://${ip}:${port}`;
-        } else if (proxyStr.includes('@')) {
-            const match = proxyStr.match(/^([^:]+):([^@]+)@([^:]+):(\d+)$/);
-            if (match) {
-                const [, user, password, host, port] = match;
-                proxyUrl = `http://${user}:${password}@${host}:${port}`;
-            }
-        }
-        
-        if (!proxyUrl) {
-            proxyUrl = `http://${proxyStr}`;
-        }
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        const response = await fetch('https://httpbin.org/ip', {
-            method: 'GET',
-            headers: {
-                'User-Agent': CONFIG.ANDROID_UA || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            },
-            signal: controller.signal,
-            ...(proxyUrl ? { proxy: proxyUrl } : {})
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-            const data = await response.json();
-            return { proxy: proxyStr, status: 'alive', ip: data.origin || 'Unknown' };
-        }
-        return { proxy: proxyStr, status: 'dead' };
-    } catch (error) {
-        return { proxy: proxy, status: 'dead', error: error.message };
-    }
-}
         
         // ===== STATE =====
         let state = {
