@@ -1363,28 +1363,93 @@ function autoRemoveDeadSite(siteUrl) {
             }
         }
 
-        async function testProxy() {
-            logDebug('🔍 Testing proxy...', 'info');
-            const proxy = CONFIG.DEFAULT_PROXY;
-            logDebug(`🔌 Proxy: ${proxy.substring(0, 30)}...`, 'info');
-            try {
-                const url = CONFIG.API_SERVERS[0] + '/check?site=shopify.com&key=' + CONFIG.CHECKER_API_KEY + '&proxy=' + encodeURIComponent(proxy);
-                logDebug(`📡 Testing: ${url.substring(0, 80)}...`, 'info');
-                const response = await fetch(url, {
-                    headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
-                });
-                logDebug(`📡 Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
-                if (response.ok) {
-                    const data = await response.json();
-                    logDebug(`📄 Response: ${JSON.stringify(data).substring(0, 150)}`, 'raw');
-                    logDebug('✅ Proxy test completed!', 'success');
-                } else {
-                    logDebug('❌ Proxy test failed!', 'error');
-                }
-            } catch (error) {
-                logDebug(`❌ Proxy test ERROR: ${error.message}`, 'error');
+        // ===== FIXED: TEST PROXY - Uses actual proxy with timeout =====
+async function testProxy(proxy) {
+    try {
+        // Parse the proxy string
+        let proxyStr = proxy;
+        if (typeof proxy === 'object' && proxy !== null) {
+            proxyStr = proxy.proxy || proxy.toString();
+        }
+        if (typeof proxyStr !== 'string') {
+            proxyStr = String(proxyStr);
+        }
+        
+        // Extract proxy components
+        let proxyUrl = null;
+        const parts = proxyStr.split(':');
+        
+        if (parts.length === 4) {
+            // Format: IP:PORT:USER:PASS
+            const [ip, port, user, password] = parts;
+            proxyUrl = `http://${user}:${password}@${ip}:${port}`;
+        } else if (parts.length === 2) {
+            // Format: IP:PORT
+            const [ip, port] = parts;
+            proxyUrl = `http://${ip}:${port}`;
+        } else if (proxyStr.includes('@')) {
+            // Format: user:pass@host:port
+            const match = proxyStr.match(/^([^:]+):([^@]+)@([^:]+):(\d+)$/);
+            if (match) {
+                const [, user, password, host, port] = match;
+                proxyUrl = `http://${user}:${password}@${host}:${port}`;
             }
         }
+        
+        // If no valid proxy format, try using as-is
+        if (!proxyUrl) {
+            proxyUrl = `http://${proxyStr}`;
+        }
+        
+        // 🔥 Test using a more reliable endpoint with proxy
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        // Use multiple test endpoints for reliability
+        const testUrls = [
+            'https://httpbin.org/ip',
+            'https://api.ipify.org?format=json',
+            'https://ifconfig.me/ip'
+        ];
+        
+        let lastError = null;
+        
+        for (const testUrl of testUrls) {
+            try {
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': CONFIG.ANDROID_UA || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    },
+                    signal: controller.signal,
+                    // 🔥 CRITICAL: Use proxy in the request
+                    ...(proxyUrl ? { proxy: proxyUrl } : {})
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const ip = data.ip || data.origin || 'Unknown';
+                    logDebug(`✅ Proxy ALIVE: ${proxyStr.substring(0, 30)}... - IP: ${ip}`, 'success');
+                    return { proxy: proxyStr, status: 'alive', ip: ip };
+                }
+            } catch (e) {
+                lastError = e;
+                // Continue to next test URL
+                continue;
+            }
+        }
+        
+        clearTimeout(timeoutId);
+        logDebug(`❌ Proxy DEAD: ${proxyStr.substring(0, 30)}...`, 'error');
+        return { proxy: proxyStr, status: 'dead', error: lastError ? lastError.message : 'Failed all tests' };
+        
+    } catch (error) {
+        logDebug(`❌ Proxy test ERROR: ${error.message}`, 'error');
+        return { proxy: proxyStr, status: 'dead', error: error.message };
+    }
+}
 
         // ===== STATE =====
         let state = {
@@ -2975,58 +3040,82 @@ function autoRemoveDeadSite(siteUrl) {
         });
 
         els.checkProxiesBtn.addEventListener('click', async function() {
-            if (state.proxies.length === 0) { alert('No proxies to check!'); return; }
+    if (state.proxies.length === 0) { 
+        alert('No proxies to check!'); 
+        return; 
+    }
 
-            this.disabled = true;
-            this.textContent = '⏳ Checking...';
-            els.proxyCheckProgress.style.display = 'block';
+    this.disabled = true;
+    this.textContent = '⏳ Checking...';
+    els.proxyCheckProgress.style.display = 'block';
 
-            const total = state.proxies.length;
-            let checked = 0, alive = 0, dead = 0;
-            const aliveProxies = [];
+    const total = state.proxies.length;
+    let checked = 0, alive = 0, dead = 0;
+    const aliveProxies = [];
 
-            for (const proxy of state.proxies) {
-                const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
-                const result = await testProxy(proxyStr);
-                if (result.status === 'alive') {
-                    aliveProxies.push({
-                        proxy: proxyStr,
-                        status: 'ALIVE',
-                        latency: 'N/A',
-                        added: new Date().toLocaleDateString()
-                    });
-                    alive++;
-                } else {
-                    dead++;
-                }
-                checked++;
-                const pct = Math.round((checked / total) * 100);
-                els.proxyCheckStatus.textContent = pct + '%';
-                els.proxyCheckFill.style.width = pct + '%';
-                els.proxyCheckChecked.textContent = checked;
-                els.proxyCheckAlive.textContent = alive;
-                els.proxyCheckDead.textContent = dead;
-                els.proxyCheckTotal.textContent = total;
-                await new Promise(r => setTimeout(r, 30));
-            }
-
-            state.proxies = aliveProxies;
-            renderProxies();
-            updateStats();
-
-            els.proxyCheckStatus.textContent = '✅ Complete!';
-            els.proxyCheckFill.style.width = '100%';
-            setTimeout(() => {
-                els.proxyCheckProgress.style.display = 'none';
-                els.proxyCheckStatus.textContent = '0%';
-                els.proxyCheckFill.style.width = '0%';
-            }, 3000);
-
-            this.disabled = false;
-            this.textContent = '🔍 Check & Remove Dead';
-            logDebug(`✅ Proxy check: ${alive} alive, ${dead} removed`, 'success');
-            alert(`✅ Done! ${alive} proxies alive, ${dead} removed.`);
+    // 🔥 Process in smaller batches to avoid timeouts
+    const batchSize = 10;
+    
+    for (let i = 0; i < state.proxies.length; i += batchSize) {
+        const batch = state.proxies.slice(i, i + batchSize);
+        const tasks = batch.map(async (proxy) => {
+            const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+            const result = await testProxy(proxyStr);
+            return { proxy: proxyStr, result: result };
         });
+        
+        const results = await Promise.all(tasks);
+        
+        for (const { proxy: proxyStr, result } of results) {
+            checked++;
+            if (result.status === 'alive') {
+                aliveProxies.push({
+                    proxy: proxyStr,
+                    status: 'ALIVE',
+                    latency: 'N/A',
+                    added: new Date().toLocaleDateString(),
+                    ip: result.ip || 'N/A'
+                });
+                alive++;
+            } else {
+                dead++;
+                logDebug(`❌ Proxy ${checked}/${total}: ${proxyStr.substring(0, 30)}... DEAD`, 'error');
+            }
+        }
+        
+        const pct = Math.round((checked / total) * 100);
+        els.proxyCheckStatus.textContent = pct + '%';
+        els.proxyCheckFill.style.width = pct + '%';
+        els.proxyCheckChecked.textContent = checked;
+        els.proxyCheckAlive.textContent = alive;
+        els.proxyCheckDead.textContent = dead;
+        els.proxyCheckTotal.textContent = total;
+        
+        // 🔥 Update UI in real-time
+        renderProxies();
+        updateStats();
+        
+        // Small delay between batches
+        await new Promise(r => setTimeout(r, 100));
+    }
+
+    state.proxies = aliveProxies;
+    renderProxies();
+    updateStats();
+
+    els.proxyCheckStatus.textContent = '✅ Complete!';
+    els.proxyCheckFill.style.width = '100%';
+    setTimeout(() => {
+        els.proxyCheckProgress.style.display = 'none';
+        els.proxyCheckStatus.textContent = '0%';
+        els.proxyCheckFill.style.width = '0%';
+    }, 3000);
+
+    this.disabled = false;
+    this.textContent = '🔍 Check & Remove Dead';
+    logDebug(`✅ Proxy check: ${alive} alive, ${dead} removed`, 'success');
+    alert(`✅ Done! ${alive} proxies alive, ${dead} removed.`);
+});
 
         els.clearProxiesBtn.addEventListener('click', function() {
             if (state.proxies.length === 0) { alert('No proxies to clear'); return; }
