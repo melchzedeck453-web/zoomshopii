@@ -2054,44 +2054,69 @@ async function testSingleProxy(proxy) {
         }
 
         // ===== IS SITE DEAD =====
-        function isSiteDead(responseMsg, gateway, price) {
-            if (!responseMsg) return true;
-            if (!gateway || gateway === "Unknown") return true;
-            if (!gateway.includes("Shopify")) return true;
-            const priceStr = String(price);
-            if (["-", "$-", "$0", "$0.0", "0", "$0.00"].includes(priceStr)) return true;
-            const r = responseMsg.toLowerCase();
-            const deadKeywords = [
-                'receipt id is empty', 'handle is empty', 'product id is empty',
-                'tax amount is empty', 'payment method identifier is empty',
-                'invalid url', 'error in 1st req', 'cloudflare', 'connection failed',
-                'timed out', 'access denied', 'tlsv1 alert', 'ssl routines',
-                'could not resolve', 'domain name not found',
-                'name or service not known', 'openssl ssl_connect',
-                'empty reply from server', 'httperror504', 'http error',
-                'timeout', 'unreachable', 'ssl error',
-                '502', '503', '504', 'bad gateway', 'service unavailable',
-                'gateway timeout', 'network error', 'connection reset',
-                'failed to detect product', 'failed to create checkout',
-                'failed to tokenize card', 'failed to get proposal data',
-                'submit rejected', 'handle error', 'http 404',
-                'delivery_delivery_line_detail_changed', 'delivery_address2_required',
-                'url rejected', 'malformed input', 'amount_too_small', 'amount too small',
-                'site dead', 'captcha_required', 'captcha required',
-                'site errors', 'not supported', 'unsupported',
-                'invalid site', 'connection refused', 'forbidden',
-                'no response', 'host not found', 'domain not found',
-                'could not connect', 'connection error', 'request timeout',
-                'gateway error', 'internal server error', 'server error',
-                'page not found', 'not found', 'http 500', 'http 502',
-                'http 503', 'http 504', 'cloudflare error', 'cf-error',
-                'cf-ray', 'challenge required', 'blocked', 'access blocked'
-            ];
-            for (const kw of deadKeywords) {
-                if (r.includes(kw)) return true;
-            }
+        function isSiteDead(responseMsg, gateway, price, rawResponse) {
+    if (!responseMsg) return true;
+    if (!gateway || gateway === "Unknown") return true;
+    if (!gateway.includes("Shopify")) return true;
+    
+    const priceStr = String(price);
+    if (["-", "$-", "$0", "$0.0", "0", "$0.00"].includes(priceStr)) return true;
+    
+    const r = responseMsg.toLowerCase();
+    
+    // 🔥 PERMANENT DEATH - These sites are ALWAYS dead
+    const permanentDead = [
+        'invalid url', 'domain name not found', 'host not found',
+        'could not resolve', 'connection refused',
+        'no response', 'empty reply from server',
+        'http 404', 'page not found', 'not found',
+        'invalid site', 'site not supported'
+    ];
+    
+    for (const kw of permanentDead) {
+        if (r.includes(kw)) return true; // ALWAYS dead
+    }
+    
+    // 🔥 TEMPORARY DEATH - These sites might work with different proxy
+    const temporaryDead = [
+        'cloudflare', 'captcha_required', 'challenge required',
+        'timeout', 'timed out', 'rate limited', 'too many requests',
+        '502', '503', '504', 'bad gateway', 'service unavailable',
+        'blocked', 'access blocked', 'forbidden', 'ssl error'
+    ];
+    
+    for (const kw of temporaryDead) {
+        if (r.includes(kw)) {
+            // ⚠️ Don't auto-remove! Just log it
+            logDebug(`⚠️ Temporary site issue: ${kw} - not auto-removing`, 'warning');
+            return false; // Return false so site is NOT auto-removed
+        }
+    }
+    
+    // Other dead keywords - consider dead but maybe keep?
+    const otherDead = [
+        'receipt id is empty', 'handle is empty', 'product id is empty',
+        'tax amount is empty', 'payment method identifier is empty',
+        'error in 1st req', 'failed to detect product',
+        'failed to create checkout', 'failed to tokenize card',
+        'submit rejected', 'handle error', 'delivery_delivery_line_detail_changed',
+        'delivery_address2_required', 'url rejected', 'malformed input',
+        'amount_too_small', 'amount too small', 'captcha required',
+        'site errors', 'not supported', 'unsupported',
+        'gateway error', 'internal server error', 'server error',
+        'http 500', 'http 502', 'http 503', 'http 504',
+        'cf-error', 'cf-ray', 'access blocked', 'challenge required'
+    ];
+    
+    for (const kw of otherDead) {
+        if (r.includes(kw)) {
+            // ⚠️ For safety, don't auto-remove
             return false;
         }
+    }
+    
+    return false;
+}
 
         // ================================================================
         // 🔥 FIXED: CHECK CARD - Handles objects AND strings
