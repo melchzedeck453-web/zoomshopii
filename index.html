@@ -1974,21 +1974,30 @@
 // 🔥 FIXED: IS SITE DEAD - Catches NO_PRODUCT and handles THROTTLED
 // ================================================================
 function isSiteDead(responseMsg, gateway, price) {
-    if (!responseMsg) return false;
+    if (!responseMsg) return false;  // ← Don't kill on empty
     
     const r = String(responseMsg).toLowerCase();
     
-    // 🔥 NO_PRODUCT = Site has no products → DEAD
-    if (r.includes('no_product') || r.includes('no product')) {
-        logDebug(`⚠️ Site has NO PRODUCTS - marking as dead`, 'warning');
-        return true;
+    // Only kill on true infrastructure failures
+    const permanentDead = [
+        'invalid url', 'domain name not found', 'host not found',
+        'could not resolve', 'connection refused',
+        'http 404', 'page not found', 'not found',
+        'invalid site', 'site not supported'
+    ];
+    
+    for (const kw of permanentDead) {
+        if (r.includes(kw)) return true;
     }
     
-    // 🔥 THROTTLED = Rate limited → TEMPORARY (keep it for retry)
-    if (r.includes('throttled')) {
-        logDebug(`⏳ Site is THROTTLED - keeping for retry`, 'warning');
-        return false;
+    // 🔥 Don't kill on NO_PRODUCT - just log it
+    if (r.includes('no_product')) {
+        logDebug(`ℹ️ NO_PRODUCT: Keeping site for retry`, 'info');
+        return false;  // ← KEEP the site!
     }
+    
+    return false;
+}
     
     // PERMANENT DEATH - Only kill sites on true infrastructure or DNS failures
     const permanentDead = [
