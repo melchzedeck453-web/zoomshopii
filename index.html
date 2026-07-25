@@ -1960,38 +1960,77 @@
             } catch { return 0; }
         }
 
-        // ================================================================
-        // 🔥 FIXED: IS SITE DEAD - CORRECTED VERSION
-        // ================================================================
-        function isSiteDead(responseMsg, gateway, price) {
-            if (!responseMsg) return false;
-            
-            const r = String(responseMsg).toLowerCase();
-            
-            // Only kill on true infrastructure failures
-            const permanentDead = [
-                'invalid url', 'domain name not found', 'host not found',
-                'could not resolve', 'connection refused',
-                'http 404', 'page not found', 'not found',
-                'invalid site', 'site not supported'
-            ];
-            
-            for (const kw of permanentDead) {
-                if (r.includes(kw)) {
-                    logDebug(`❌ Site is permanently dead: ${kw}`, 'error');
-                    return true;
-                }
-            }
-            
-            // Don't kill on NO_PRODUCT - just log it
-            if (r.includes('no_product')) {
-                logDebug(`ℹ️ NO_PRODUCT: Keeping site for retry`, 'info');
-                return false;
-            }
-            
-            return false;
+    // ================================================================
+// 🔥 FIXED: IS SITE DEAD - Only kills on infrastructure failures + NO_PRODUCT
+// ================================================================
+function isSiteDead(responseMsg, gateway, price) {
+    if (!responseMsg) return false;
+    
+    const r = String(responseMsg).toLowerCase();
+    
+    // 🔥 NO_PRODUCT = Site has NO products → DEAD
+    if (r.includes('no_product') || r.includes('no product')) {
+        logDebug(`⚠️ Site has NO PRODUCTS - marking as dead, will retry on another site`, 'warning');
+        return true;
+    }
+    
+    // 🔥 THROTTLED = Rate limited → DEAD (try another site)
+    if (r.includes('throttled')) {
+        logDebug(`⏳ Site is THROTTLED - marking as dead, will retry on another site`, 'warning');
+        return true;
+    }
+    
+    // 🔥 TIMEOUT = Site timed out → DEAD (try another site)
+    if (r.includes('timeout') || r.includes('timed out')) {
+        logDebug(`⏳ Site TIMEOUT - marking as dead, will retry on another site`, 'warning');
+        return true;
+    }
+    
+    // 🔥 CART_FAILED = Cart issue → DEAD (try another site)
+    if (r.includes('cart_failed')) {
+        logDebug(`🛒 Site CART_FAILED - marking as dead, will retry on another site`, 'warning');
+        return true;
+    }
+    
+    // 🔥 TOKENIZATION_FAILED = Gateway issue → DEAD (try another site)
+    if (r.includes('tokenization_failed') || r.includes('tokenization failed')) {
+        logDebug(`🔑 Site TOKENIZATION_FAILED - marking as dead, will retry on another site`, 'warning');
+        return true;
+    }
+    
+    // 🔥 CLOUDFLARE = Cloudflare blocking → DEAD (try another site)
+    if (r.includes('cloudflare') || r.includes('cf-error') || r.includes('cf-ray')) {
+        logDebug(`☁️ Site has CLOUDFLARE - marking as dead, will retry on another site`, 'warning');
+        return true;
+    }
+    
+    // 🔥 CAPTCHA = Captcha required → DEAD (try another site)
+    if (r.includes('captcha') || r.includes('challenge required')) {
+        logDebug(`🤖 Site has CAPTCHA - marking as dead, will retry on another site`, 'warning');
+        return true;
+    }
+    
+    // Only kill on true infrastructure failures
+    const permanentDead = [
+        'invalid url', 'domain name not found', 'host not found',
+        'could not resolve', 'connection refused',
+        'http 404', 'page not found', 'not found',
+        'invalid site', 'site not supported',
+        'connection failed', 'network error', 'connection reset',
+        'ssl error', 'tlsv1 alert', 'ssl routines',
+        'empty reply from server', 'no response'
+    ];
+    
+    for (const kw of permanentDead) {
+        if (r.includes(kw)) {
+            logDebug(`❌ Site is permanently dead: ${kw}`, 'error');
+            return true;
         }
-
+    }
+    
+    return false;
+}
+        
         // ================================================================
 // 🔥 FIXED: CHECK CARD - NO_PRODUCT triggers retry
 // ================================================================
