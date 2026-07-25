@@ -1732,6 +1732,7 @@
     els.siteList.innerHTML = html;
     els.liveSiteCount.textContent = state.sites.length;
 }
+        
         // ===== RENDER PROXIES =====
         function renderProxies() {
             if (state.proxies.length === 0) {
@@ -2188,7 +2189,7 @@
         // ================================================================
         // TEST SITE WITH PRICE
         // ================================================================
-        async function testSiteWithPrice(site, proxy) {
+       async function testSiteWithPrice(site, proxy) {
     if (typeof site === 'object' && site !== null) {
         site = site.url || site.toString();
     }
@@ -2236,7 +2237,7 @@
         const gateway = raw.Gate || raw.Gateway || raw.gate || '';
         const priceValue = getPriceFromResponse(raw);
         
-        // 🔥 CRITICAL: Check if site has products
+        // 🔥 CRITICAL: Check if site has products (price > 0)
         if (priceValue > 0) {
             logDebug(`✅ Site has products: $${priceValue}`, 'success');
             return { site: site, status: 'alive', price: priceValue };
@@ -2249,18 +2250,18 @@
             return { site: site, status: 'dead', price: 0 };
         }
         
-        // 🔥 Check if site is dead
-        if (isSiteDead(responseMsg, gateway, priceDisplay)) {
-            logDebug(`❌ Site is dead: ${site}`, 'error');
-            return { site: site, status: 'dead', price: 0 };
-        }
-        
-        // If we have a valid gateway but no price, still mark as dead
+        // 🔥 If gateway is Shopify but price is 0 → NO PRODUCTS
         if (gateway && gateway !== 'Unknown' && gateway.includes('Shopify')) {
             if (priceValue === 0) {
                 logDebug(`⚠️ Site has Shopify but NO PRODUCTS: ${site}`, 'warning');
                 return { site: site, status: 'dead', price: 0 };
             }
+        }
+        
+        // 🔥 If response contains CART_FAILED but has price → ALIVE
+        if (responseMsg.toLowerCase().includes('cart_failed') && priceValue > 0) {
+            logDebug(`✅ Site ALIVE (CART_FAILED but has products): $${priceValue}`, 'success');
+            return { site: site, status: 'alive', price: priceValue };
         }
         
         return { site: site, status: 'dead', price: 0 };
@@ -2891,6 +2892,8 @@ els.addManualSitesBtn.addEventListener('click', async function() {
     let addedCount = 0;
     let deadCount = 0;
     let results = [];
+    let checked = 0;
+    const total = urls.length;
     
     for (const url of urls) {
         const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
@@ -2898,6 +2901,7 @@ els.addManualSitesBtn.addEventListener('click', async function() {
         
         // 🔥 CHECK SITE FIRST
         const result = await testSiteWithPrice(url, proxyStr);
+        checked++;
         
         if (result.status === 'alive' && result.price > 0) {
             // ✅ Site has products and price - ADD IT
@@ -2916,6 +2920,11 @@ els.addManualSitesBtn.addEventListener('click', async function() {
             results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
             logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
         }
+        
+        // Update progress every 5 sites
+        if (checked % 5 === 0 || checked === total) {
+            this.textContent = `⏳ Checking ${checked}/${total} sites...`;
+        }
     }
     
     // Remove duplicates after adding
@@ -2933,7 +2942,7 @@ els.addManualSitesBtn.addEventListener('click', async function() {
     const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
     alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
 });
-
+        
 // ================================================================
 // FIXED: UPLOAD SITES WITH PRE-CHECK
 // ================================================================
@@ -2957,6 +2966,8 @@ els.uploadSitesBtn.addEventListener('click', function() {
         let addedCount = 0;
         let deadCount = 0;
         let results = [];
+        let checked = 0;
+        const total = urls.length;
         
         for (const url of urls) {
             const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
@@ -2964,6 +2975,7 @@ els.uploadSitesBtn.addEventListener('click', function() {
             
             // 🔥 CHECK SITE FIRST
             const result = await testSiteWithPrice(url, proxyStr);
+            checked++;
             
             if (result.status === 'alive' && result.price > 0) {
                 state.sites.push({
@@ -2979,6 +2991,10 @@ els.uploadSitesBtn.addEventListener('click', function() {
                 deadCount++;
                 results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
                 logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
+            }
+            
+            if (checked % 5 === 0 || checked === total) {
+                els.uploadSitesBtn.textContent = `⏳ Checking ${checked}/${total} sites...`;
             }
         }
         
