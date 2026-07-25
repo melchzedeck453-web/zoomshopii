@@ -2848,28 +2848,79 @@
         // SITE MANAGER
         // ================================================================
 
-        els.uploadSitesBtn.addEventListener('click', function() {
-            const file = els.siteFileInput.files[0];
-            if (!file) { alert('Please select a .txt file'); return; }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const urls = e.target.result.split('\n').map(u => u.trim()).filter(u => u);
-                const newSites = urls.map(url => ({
+        // ================================================================
+// FIXED: UPLOAD SITES WITH PRE-CHECK
+// ================================================================
+els.uploadSitesBtn.addEventListener('click', function() {
+    const file = els.siteFileInput.files[0];
+    if (!file) { alert('Please select a .txt file'); return; }
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const urls = e.target.result.split('\n').map(u => u.trim()).filter(u => u);
+        if (urls.length === 0) { alert('No sites found in file'); return; }
+        
+        if (state.proxies.length === 0) {
+            alert('❌ No proxies available! Please add proxies first.');
+            return;
+        }
+        
+        els.uploadSitesBtn.disabled = true;
+        els.uploadSitesBtn.textContent = '⏳ Checking...';
+        
+        let addedCount = 0;
+        let deadCount = 0;
+        let results = [];
+        let checked = 0;
+        const total = urls.length;
+        
+        for (const url of urls) {
+            const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+            const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+            
+            // 🔥 CHECK SITE FIRST
+            const result = await testSiteWithPrice(url, proxyStr);
+            checked++;
+            
+            if (result.status === 'alive' && result.price > 0) {
+                // ✅ Site has products and price - ADD IT
+                state.sites.push({
                     url: url,
                     status: 'ALIVE',
-                    price: '0.00',
+                    price: result.price.toFixed(2),
                     added: new Date().toLocaleDateString()
-                }));
-                state.sites = [...state.sites, ...newSites];
-                state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
-                renderSites();
-                updateStats();
-                logDebug(`🌐 Added ${urls.length} sites`, 'info');
-                alert(`✅ ${urls.length} sites added! Total: ${state.sites.length}`);
-                els.siteFileInput.value = '';
-            };
-            reader.readAsText(file);
-        });
+                });
+                addedCount++;
+                results.push(`✅ ${url} - $${result.price.toFixed(2)}`);
+                logDebug(`✅ Site ALIVE: ${url} - $${result.price.toFixed(2)}`, 'success');
+            } else {
+                // ❌ Site has NO PRODUCTS - DON'T ADD
+                deadCount++;
+                results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
+                logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
+            }
+            
+            if (checked % 5 === 0 || checked === total) {
+                els.uploadSitesBtn.textContent = `⏳ Checking ${checked}/${total} sites...`;
+            }
+        }
+        
+        // Remove duplicates after adding
+        state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
+        
+        renderSites();
+        updateStats();
+        
+        els.uploadSitesBtn.disabled = false;
+        els.uploadSitesBtn.textContent = 'Upload File';
+        els.siteFileInput.value = '';
+        
+        const resultText = results.slice(0, 20).join('\n');
+        const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
+        alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
+    };
+    reader.readAsText(file);
+});
 
         // ================================================================
 // FIXED: ADD SITES WITH PRE-CHECK
