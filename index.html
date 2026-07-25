@@ -2155,9 +2155,13 @@
         }
 
         // ================================================================
-        // CHECK CARD WITH RETRY
+        // 🔥 CORRECTED: CHECK CARD WITH RETRY - Auto-switches sites on ANY error
         // ================================================================
-        async function checkCardWithRetry(card, maxRetries = 3) {
+        async function checkCardWithRetry(card, maxRetries = 5) {
+            // Keep track of sites already tried to avoid repeating
+            let triedSites = [];
+            let lastError = null;
+            
             if (state.sites.length === 0) {
                 logDebug(`❌ No sites available for ${maskCard(card)}`, 'error');
                 return { status: 'Site Error', message: 'No sites available', card: card };
@@ -2168,22 +2172,74 @@
             }
             
             for (let attempt = 0; attempt < maxRetries; attempt++) {
-                const siteObj = state.sites[Math.floor(Math.random() * state.sites.length)];
-                const site = typeof siteObj === 'object' ? siteObj.url : siteObj;
+                // Get a site that hasn't been tried yet
+                let siteObj = null;
+                let site = null;
+                let availableSites = state.sites.filter(s => {
+                    const url = typeof s === 'object' ? s.url : s;
+                    return !triedSites.includes(url);
+                });
                 
+                // If all sites have been tried, break and return error
+                if (availableSites.length === 0) {
+                    logDebug(`❌ All ${state.sites.length} sites tried and failed for ${maskCard(card)}`, 'error');
+                    break;
+                }
+                
+                // Pick a random site from available ones
+                siteObj = availableSites[Math.floor(Math.random() * availableSites.length)];
+                site = typeof siteObj === 'object' ? siteObj.url : siteObj;
+                triedSites.push(site);
+                
+                // Get a proxy
                 const proxyObj = state.proxies[Math.floor(Math.random() * state.proxies.length)];
                 const proxy = typeof proxyObj === 'object' ? proxyObj.proxy : proxyObj;
                 
-                logDebug(`🔄 Attempt ${attempt + 1}/${maxRetries} for ${maskCard(card)}`, 'info');
+                logDebug(`🔄 Attempt ${attempt + 1}/${maxRetries} for ${maskCard(card)} on ${site}`, 'info');
+                
+                // Check the card on this site
                 const result = await checkCard(card, site, proxy);
-                if (!result.retry) return result;
+                
+                // If site is alive and card got a result (Charged/Approved/Dead), return it
+                if (!result.retry) {
+                    // Check if the result is a DECLINED card (not a site error)
+                    const isDeclined = result.status === 'Dead' || 
+                                      result.status === 'Invalid' ||
+                                      result.status === 'Declined';
+                    
+                    // If it's a declined card, return it (no need to retry)
+                    if (isDeclined) {
+                        logDebug(`📊 Card ${maskCard(card)} returned DECLINED on ${site} - stopping retries`, 'info');
+                        return result;
+                    }
+                    
+                    // If it's Charged or Approved, return it
+                    if (result.status === 'Charged' || result.status === 'Approved') {
+                        return result;
+                    }
+                }
+                
+                // If we got here, it's a Site Error - log and try next site
+                lastError = result;
+                logDebug(`⚠️ Site ${site} failed (${result.message || 'Unknown error'}) - trying next site`, 'warning');
+                
                 if (attempt < maxRetries - 1) {
-                    logDebug(`⏳ Waiting 100ms before retry...`, 'info');
-                    await new Promise(r => setTimeout(r, 100));
+                    logDebug(`⏳ Waiting 200ms before trying next site...`, 'info');
+                    await new Promise(r => setTimeout(r, 200));
                 }
             }
-            logDebug(`❌ Max retries exceeded for ${maskCard(card)}`, 'error');
-            return { status: 'Site Error', message: 'Max retries exceeded', card: card };
+            
+            // If all retries failed
+            logDebug(`❌ All ${maxRetries} attempts failed for ${maskCard(card)}`, 'error');
+            return {
+                status: 'Site Error',
+                message: lastError ? lastError.message : 'All sites failed',
+                card: card,
+                retry: false,
+                gateway: 'Unknown',
+                price: '-',
+                price_value: 0
+            };
         }
 
         // ================================================================
@@ -2366,7 +2422,7 @@
                 const results = await Promise.all(batch.map(async (line) => {
                     const cardData = parseCardLine(line);
                     if (!cardData) return null;
-                    const result = await checkCardWithRetry(cardData.raw, 3);
+                    const result = await checkCardWithRetry(cardData.raw, 5);
                     if (result.card && !result.card.includes('|')) {
                         const parts = result.card.split('|');
                         if (parts.length === 4) result.card = parts[0];
@@ -2564,7 +2620,7 @@
                 const results = await Promise.all(batch.map(async (line) => {
                     const cardData = parseCardLine(line);
                     if (!cardData) return null;
-                    const result = await checkCardWithRetry(cardData.raw, 3);
+                    const result = await checkCardWithRetry(cardData.raw, 5);
                     if (result.card && !result.card.includes('|')) {
                         const parts = result.card.split('|');
                         if (parts.length === 4) result.card = parts[0];
@@ -2849,220 +2905,149 @@
         // ================================================================
 
         // ================================================================
-// FIXED: UPLOAD SITES WITH PRE-CHECK
-// ================================================================
-els.uploadSitesBtn.addEventListener('click', function() {
-    const file = els.siteFileInput.files[0];
-    if (!file) { alert('Please select a .txt file'); return; }
-    
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const urls = e.target.result.split('\n').map(u => u.trim()).filter(u => u);
-        if (urls.length === 0) { alert('No sites found in file'); return; }
-        
-        if (state.proxies.length === 0) {
-            alert('❌ No proxies available! Please add proxies first.');
-            return;
-        }
-        
-        els.uploadSitesBtn.disabled = true;
-        els.uploadSitesBtn.textContent = '⏳ Checking...';
-        
-        let addedCount = 0;
-        let deadCount = 0;
-        let results = [];
-        let checked = 0;
-        const total = urls.length;
-        
-        for (const url of urls) {
-            const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
-            const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+        // FIXED: UPLOAD SITES WITH PRE-CHECK
+        // ================================================================
+        els.uploadSitesBtn.addEventListener('click', function() {
+            const file = els.siteFileInput.files[0];
+            if (!file) { alert('Please select a .txt file'); return; }
             
-            // 🔥 CHECK SITE FIRST
-            const result = await testSiteWithPrice(url, proxyStr);
-            checked++;
-            
-            if (result.status === 'alive' && result.price > 0) {
-                // ✅ Site has products and price - ADD IT
-                state.sites.push({
-                    url: url,
-                    status: 'ALIVE',
-                    price: result.price.toFixed(2),
-                    added: new Date().toLocaleDateString()
-                });
-                addedCount++;
-                results.push(`✅ ${url} - $${result.price.toFixed(2)}`);
-                logDebug(`✅ Site ALIVE: ${url} - $${result.price.toFixed(2)}`, 'success');
-            } else {
-                // ❌ Site has NO PRODUCTS - DON'T ADD
-                deadCount++;
-                results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
-                logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
-            }
-            
-            if (checked % 5 === 0 || checked === total) {
-                els.uploadSitesBtn.textContent = `⏳ Checking ${checked}/${total} sites...`;
-            }
-        }
-        
-        // Remove duplicates after adding
-        state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
-        
-        renderSites();
-        updateStats();
-        
-        els.uploadSitesBtn.disabled = false;
-        els.uploadSitesBtn.textContent = 'Upload File';
-        els.siteFileInput.value = '';
-        
-        const resultText = results.slice(0, 20).join('\n');
-        const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
-        alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
-    };
-    reader.readAsText(file);
-});
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const urls = e.target.result.split('\n').map(u => u.trim()).filter(u => u);
+                if (urls.length === 0) { alert('No sites found in file'); return; }
+                
+                if (state.proxies.length === 0) {
+                    alert('❌ No proxies available! Please add proxies first.');
+                    return;
+                }
+                
+                els.uploadSitesBtn.disabled = true;
+                els.uploadSitesBtn.textContent = '⏳ Checking...';
+                
+                let addedCount = 0;
+                let deadCount = 0;
+                let results = [];
+                let checked = 0;
+                const total = urls.length;
+                
+                for (const url of urls) {
+                    const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+                    const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+                    
+                    // 🔥 CHECK SITE FIRST
+                    const result = await testSiteWithPrice(url, proxyStr);
+                    checked++;
+                    
+                    if (result.status === 'alive' && result.price > 0) {
+                        // ✅ Site has products and price - ADD IT
+                        state.sites.push({
+                            url: url,
+                            status: 'ALIVE',
+                            price: result.price.toFixed(2),
+                            added: new Date().toLocaleDateString()
+                        });
+                        addedCount++;
+                        results.push(`✅ ${url} - $${result.price.toFixed(2)}`);
+                        logDebug(`✅ Site ALIVE: ${url} - $${result.price.toFixed(2)}`, 'success');
+                    } else {
+                        // ❌ Site has NO PRODUCTS - DON'T ADD
+                        deadCount++;
+                        results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
+                        logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
+                    }
+                    
+                    if (checked % 5 === 0 || checked === total) {
+                        els.uploadSitesBtn.textContent = `⏳ Checking ${checked}/${total} sites...`;
+                    }
+                }
+                
+                // Remove duplicates after adding
+                state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
+                
+                renderSites();
+                updateStats();
+                
+                els.uploadSitesBtn.disabled = false;
+                els.uploadSitesBtn.textContent = 'Upload File';
+                els.siteFileInput.value = '';
+                
+                const resultText = results.slice(0, 20).join('\n');
+                const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
+                alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
+            };
+            reader.readAsText(file);
+        });
 
         // ================================================================
-// FIXED: ADD SITES WITH PRE-CHECK
-// ================================================================
-els.addManualSitesBtn.addEventListener('click', async function() {
-    const text = els.manualSites.value;
-    if (!text.trim()) { alert('Please paste some sites'); return; }
-    
-    const urls = text.split('\n').map(u => u.trim()).filter(u => u);
-    if (urls.length === 0) { alert('No valid sites found'); return; }
-    
-    if (state.proxies.length === 0) {
-        alert('❌ No proxies available! Please add proxies first.');
-        return;
-    }
-    
-    this.disabled = true;
-    this.textContent = '⏳ Checking sites...';
-    
-    let addedCount = 0;
-    let deadCount = 0;
-    let results = [];
-    let checked = 0;
-    const total = urls.length;
-    
-    for (const url of urls) {
-        const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
-        const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
-        
-        // 🔥 CHECK SITE FIRST
-        const result = await testSiteWithPrice(url, proxyStr);
-        checked++;
-        
-        if (result.status === 'alive' && result.price > 0) {
-            // ✅ Site has products and price - ADD IT
-            state.sites.push({
-                url: url,
-                status: 'ALIVE',
-                price: result.price.toFixed(2),
-                added: new Date().toLocaleDateString()
-            });
-            addedCount++;
-            results.push(`✅ ${url} - $${result.price.toFixed(2)}`);
-            logDebug(`✅ Site ALIVE: ${url} - $${result.price.toFixed(2)}`, 'success');
-        } else {
-            // ❌ Site has NO PRODUCTS - DON'T ADD
-            deadCount++;
-            results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
-            logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
-        }
-        
-        // Update progress every 5 sites
-        if (checked % 5 === 0 || checked === total) {
-            this.textContent = `⏳ Checking ${checked}/${total} sites...`;
-        }
-    }
-    
-    // Remove duplicates after adding
-    state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
-    
-    renderSites();
-    updateStats();
-    
-    this.disabled = false;
-    this.textContent = '➕ Add Sites';
-    els.manualSites.value = '';
-    
-    // Show results
-    const resultText = results.slice(0, 20).join('\n');
-    const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
-    alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
-});
-        
-// ================================================================
-// FIXED: UPLOAD SITES WITH PRE-CHECK
-// ================================================================
-els.uploadSitesBtn.addEventListener('click', function() {
-    const file = els.siteFileInput.files[0];
-    if (!file) { alert('Please select a .txt file'); return; }
-    
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const urls = e.target.result.split('\n').map(u => u.trim()).filter(u => u);
-        if (urls.length === 0) { alert('No sites found in file'); return; }
-        
-        if (state.proxies.length === 0) {
-            alert('❌ No proxies available! Please add proxies first.');
-            return;
-        }
-        
-        els.uploadSitesBtn.disabled = true;
-        els.uploadSitesBtn.textContent = '⏳ Checking...';
-        
-        let addedCount = 0;
-        let deadCount = 0;
-        let results = [];
-        let checked = 0;
-        const total = urls.length;
-        
-        for (const url of urls) {
-            const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
-            const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+        // FIXED: ADD SITES WITH PRE-CHECK
+        // ================================================================
+        els.addManualSitesBtn.addEventListener('click', async function() {
+            const text = els.manualSites.value;
+            if (!text.trim()) { alert('Please paste some sites'); return; }
             
-            // 🔥 CHECK SITE FIRST
-            const result = await testSiteWithPrice(url, proxyStr);
-            checked++;
+            const urls = text.split('\n').map(u => u.trim()).filter(u => u);
+            if (urls.length === 0) { alert('No valid sites found'); return; }
             
-            if (result.status === 'alive' && result.price > 0) {
-                state.sites.push({
-                    url: url,
-                    status: 'ALIVE',
-                    price: result.price.toFixed(2),
-                    added: new Date().toLocaleDateString()
-                });
-                addedCount++;
-                results.push(`✅ ${url} - $${result.price.toFixed(2)}`);
-                logDebug(`✅ Site ALIVE: ${url} - $${result.price.toFixed(2)}`, 'success');
-            } else {
-                deadCount++;
-                results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
-                logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
+            if (state.proxies.length === 0) {
+                alert('❌ No proxies available! Please add proxies first.');
+                return;
             }
             
-            if (checked % 5 === 0 || checked === total) {
-                els.uploadSitesBtn.textContent = `⏳ Checking ${checked}/${total} sites...`;
+            this.disabled = true;
+            this.textContent = '⏳ Checking sites...';
+            
+            let addedCount = 0;
+            let deadCount = 0;
+            let results = [];
+            let checked = 0;
+            const total = urls.length;
+            
+            for (const url of urls) {
+                const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+                const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+                
+                // 🔥 CHECK SITE FIRST
+                const result = await testSiteWithPrice(url, proxyStr);
+                checked++;
+                
+                if (result.status === 'alive' && result.price > 0) {
+                    // ✅ Site has products and price - ADD IT
+                    state.sites.push({
+                        url: url,
+                        status: 'ALIVE',
+                        price: result.price.toFixed(2),
+                        added: new Date().toLocaleDateString()
+                    });
+                    addedCount++;
+                    results.push(`✅ ${url} - $${result.price.toFixed(2)}`);
+                    logDebug(`✅ Site ALIVE: ${url} - $${result.price.toFixed(2)}`, 'success');
+                } else {
+                    // ❌ Site has NO PRODUCTS - DON'T ADD
+                    deadCount++;
+                    results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
+                    logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
+                }
+                
+                if (checked % 5 === 0 || checked === total) {
+                    this.textContent = `⏳ Checking ${checked}/${total} sites...`;
+                }
             }
-        }
-        
-        state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
-        renderSites();
-        updateStats();
-        
-        els.uploadSitesBtn.disabled = false;
-        els.uploadSitesBtn.textContent = 'Upload File';
-        els.siteFileInput.value = '';
-        
-        const resultText = results.slice(0, 20).join('\n');
-        const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
-        alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
-    };
-    reader.readAsText(file);
-});
+            
+            // Remove duplicates after adding
+            state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
+            
+            renderSites();
+            updateStats();
+            
+            this.disabled = false;
+            this.textContent = '➕ Add Sites';
+            els.manualSites.value = '';
+            
+            // Show results
+            const resultText = results.slice(0, 20).join('\n');
+            const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
+            alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
+        });
 
         els.clearSitesBtn.addEventListener('click', function() {
             if (state.sites.length === 0) { alert('No sites to clear'); return; }
