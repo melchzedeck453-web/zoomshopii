@@ -2134,34 +2134,39 @@
         // 🔥 FIXED: CHECK CARD WITH RETRY - Handles objects
         // ================================================================
         async function checkCardWithRetry(card, maxRetries = 4) {
-            if (state.sites.length === 0) {
-                logDebug(`❌ No sites available for ${maskCard(card)}`, 'error');
-                return { status: 'Site Error', message: 'No sites available', card: card };
-            }
-            if (state.proxies.length === 0) {
-                logDebug(`❌ No proxies available for ${maskCard(card)}`, 'error');
-                return { status: 'Site Error', message: 'No proxies available', card: card };
-            }
-            
-            for (let attempt = 0; attempt < maxRetries; attempt++) {
-                // 🔥 FIX: Extract URL from site object
-                const siteObj = state.sites[Math.floor(Math.random() * state.sites.length)];
-                const site = typeof siteObj === 'object' ? siteObj.url : siteObj;
-                
-                const proxyObj = state.proxies[Math.floor(Math.random() * state.proxies.length)];
-                const proxy = typeof proxyObj === 'object' ? proxyObj.proxy : proxyObj;
-                
-                logDebug(`🔄 Attempt ${attempt + 1}/${maxRetries} for ${maskCard(card)}`, 'info');
-                const result = await checkCard(card, site, proxy);
-                if (!result.retry) return result;
-                if (attempt < maxRetries - 1) {
-                    logDebug(`⏳ Waiting 100ms before retry...`, 'info');
-                    await new Promise(r => setTimeout(r, 100));
-                }
-            }
-            logDebug(`❌ Max retries exceeded for ${maskCard(card)}`, 'error');
-            return { status: 'Site Error', message: 'Max retries exceeded', card: card };
+    if (state.sites.length === 0) {
+        logDebug(`❌ No sites available for ${maskCard(card)}`, 'error');
+        return { status: 'Site Error', message: 'No sites available', card: card, site: 'Unknown' };
+    }
+    if (state.proxies.length === 0) {
+        logDebug(`❌ No proxies available for ${maskCard(card)}`, 'error');
+        return { status: 'Site Error', message: 'No proxies available', card: card, site: 'Unknown' };
+    }
+    
+    let lastSite = 'Unknown';
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const siteObj = state.sites[Math.floor(Math.random() * state.sites.length)];
+        const site = typeof siteObj === 'object' ? siteObj.url : siteObj;
+        lastSite = site;
+        
+        const proxyObj = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+        const proxy = typeof proxyObj === 'object' ? proxyObj.proxy : proxyObj;
+        
+        logDebug(`🔄 Attempt ${attempt + 1}/${maxRetries} for ${maskCard(card)} on ${site}`, 'info');
+        const result = await checkCard(card, site, proxy);
+        if (!result.retry) {
+            result.site = site;  // ✅ Ensure site is set
+            return result;
         }
+        if (attempt < maxRetries - 1) {
+            logDebug(`⏳ Waiting 100ms before retry...`, 'info');
+            await new Promise(r => setTimeout(r, 100));
+        }
+    }
+    logDebug(`❌ Max retries exceeded for ${maskCard(card)}`, 'error');
+    return { status: 'Site Error', message: 'Max retries exceeded', card: card, site: lastSite };
+}
 
         // ================================================================
         // 🔥 FIXED: TEST SITE WITH PRICE - Handles objects
@@ -2544,129 +2549,140 @@
         // ================================================================
         // MASS CHECK - ULTRA FAST
         // ================================================================
-        async function processMassCheck() {
-            const total = massCardsList.length;
-            const batchSize = 200;
-            
-            for (let i = massCurrentIndex; i < total; i += batchSize) {
-                if (massStopRequested || massPaused) {
-                    while (massPaused) {
-                        await new Promise(r => setTimeout(r, 100));
-                        if (massStopRequested) break;
-                    }
-                    if (massStopRequested) break;
-                }
-                
-                const batch = massCardsList.slice(i, Math.min(i + batchSize, total));
-                logDebug(`📦 Mass batch ${Math.floor(i/batchSize)+1}: ${batch.length} cards`, 'info');
-                
-                const results = await Promise.all(batch.map(async (line) => {
-                    const cardData = parseCardLine(line);
-                    if (!cardData) return null;
-                    const result = await checkCardWithRetry(cardData.raw, 4);
-                    if (result.card && !result.card.includes('|')) {
-                        const parts = result.card.split('|');
-                        if (parts.length === 4) result.card = parts[0];
-                    }
-                    return result;
-                }));
-                
-                for (const result of results) {
-                    if (!result) continue;
-                    
-                    const cardNum = result.card || 'Unknown';
-                    const binInfo = await getBinInfo(cardNum);
-                    const fullCard = result.card || 'Unknown';
-                    
-                    if (result.status === 'Charged') {
-                        state.charged++;
-                        state.approved++;
-                        state.hits.unshift({
-                            card: cardNum,
-                            fullCard: fullCard,
-                            exp: result.exp || 'N/A',
-                            cvv: result.cvv || 'N/A',
-                            amount: result.price_value || 0,
-                            status: 'CHARGED',
-                            time: new Date().toLocaleTimeString(),
-                            date: new Date().toLocaleString(),
-                            type: result.gateway || 'Shopify Payments',
-                            responseType: result.responseType || 'ORDER_PLACED',
-                            gateway: result.gateway || 'Shopify Payments',
-                            price: result.price || '-',
-                            bank: binInfo.bank || '-',
-                            country: binInfo.country ? binInfo.country + ' ' + binInfo.flag : '-',
-                            brand: binInfo.brand || '-',
-                            cardType: binInfo.type || '-',
-                            cardLevel: binInfo.level || '-'
-                        });
-                    } else if (result.status === 'Approved') {
-                        state.approved++;
-                        state.hits.unshift({
-                            card: cardNum,
-                            fullCard: fullCard,
-                            exp: result.exp || 'N/A',
-                            cvv: result.cvv || 'N/A',
-                            amount: result.price_value || 0,
-                            status: 'APPROVED',
-                            time: new Date().toLocaleTimeString(),
-                            date: new Date().toLocaleString(),
-                            type: result.gateway || 'Shopify Payments',
-                            responseType: result.responseType || 'APPROVED',
-                            gateway: result.gateway || 'Shopify Payments',
-                            price: result.price || '-',
-                            bank: binInfo.bank || '-',
-                            country: binInfo.country ? binInfo.country + ' ' + binInfo.flag : '-',
-                            brand: binInfo.brand || '-',
-                            cardType: binInfo.type || '-',
-                            cardLevel: binInfo.level || '-'
-                        });
-                    } else {
-                        state.declined++;
-                    }
-                    state.totalHits++;
-                    massResults.push(result);
-                }
-                
-                massCurrentIndex = Math.min(i + batchSize, total);
-                const pct = Math.round((massCurrentIndex / total) * 100);
-                els.massStatus.textContent = pct + '%';
-                els.massProgressFill.style.width = pct + '%';
-                els.massProgressText.textContent = `${massCurrentIndex}/${total} (${pct}%)`;
-                els.massStatusIndicator.textContent = massPaused ? '⏸️ Paused' : '🔄 Running';
-                els.massStatusIndicator.className = `status-indicator ${massPaused ? 'paused' : 'running'}`;
-                
-                let charged = 0, approved = 0, dead = 0;
-                massResults.forEach(r => {
-                    if (r.status === 'Charged') charged++;
-                    else if (r.status === 'Approved') approved++;
-                    else dead++;
-                });
-                els.massChargedCount.textContent = charged;
-                els.massApprovedCount.textContent = approved;
-                els.massDeadCount.textContent = dead;
-                
-                renderMassResults();
-                updateMassFilterCounts();
-                updateStats();
-                renderHits();
-                
-                if (!massStopRequested) await new Promise(r => setTimeout(r, 30));
+       async function processMassCheck() {
+    const total = massCardsList.length;
+    const batchSize = 100;
+    
+    for (let i = massCurrentIndex; i < total; i += batchSize) {
+        if (massStopRequested || massPaused) {
+            while (massPaused) {
+                await new Promise(r => setTimeout(r, 100));
+                if (massStopRequested) break;
             }
-            
-            if (!massStopRequested && massCurrentIndex >= total) {
-                massRunning = false;
-                updateMassUI('stopped');
-                els.massStatusIndicator.textContent = '✅ Complete!';
-                els.massStatusIndicator.className = 'status-indicator complete';
-                els.massProgressText.textContent = `${total}/${total} (100%)`;
-                els.massStatus.textContent = '✅ Complete! (' + total + ' cards)';
-                els.massProgressFill.style.width = '100%';
-                renderMassResults();
-                updateMassFilterCounts();
-                logDebug(`✅ Mass check COMPLETE! ${total} cards processed`, 'success');
-            }
+            if (massStopRequested) break;
         }
+        
+        const batch = massCardsList.slice(i, Math.min(i + batchSize, total));
+        logDebug(`📦 Mass batch ${Math.floor(i/batchSize)+1}: ${batch.length} cards`, 'info');
+        
+        const results = await Promise.all(batch.map(async (line) => {
+            const cardData = parseCardLine(line);
+            if (!cardData) return null;
+            const result = await checkCardWithRetry(cardData.raw, 4);
+            if (result.card && !result.card.includes('|')) {
+                const parts = result.card.split('|');
+                if (parts.length === 4) result.card = parts[0];
+            }
+            // ✅ FIX: Ensure site is preserved
+            if (!result.site) {
+                result.site = 'Unknown';
+            }
+            return result;
+        }));
+        
+        for (const result of results) {
+            if (!result) continue;
+            
+            // ✅ DEBUG: Log the site to see if it's being preserved
+            logDebug(`📊 Result: ${result.card} - ${result.status} - Site: ${result.site || 'Unknown'}`, 'info');
+            
+            const cardNum = result.card || 'Unknown';
+            const binInfo = await getBinInfo(cardNum);
+            const fullCard = result.card || 'Unknown';
+            
+            if (result.status === 'Charged') {
+                state.charged++;
+                state.approved++;
+                state.hits.unshift({
+                    card: cardNum,
+                    fullCard: fullCard,
+                    exp: result.exp || 'N/A',
+                    cvv: result.cvv || 'N/A',
+                    amount: result.price_value || 0,
+                    status: 'CHARGED',
+                    time: new Date().toLocaleTimeString(),
+                    date: new Date().toLocaleString(),
+                    type: result.gateway || 'Shopify Payments',
+                    responseType: result.responseType || 'ORDER_PLACED',
+                    gateway: result.gateway || 'Shopify Payments',
+                    price: result.price || '-',
+                    site: result.site || 'Unknown',  // ✅ SAVE SITE
+                    bank: binInfo.bank || '-',
+                    country: binInfo.country ? binInfo.country + ' ' + binInfo.flag : '-',
+                    brand: binInfo.brand || '-',
+                    cardType: binInfo.type || '-',
+                    cardLevel: binInfo.level || '-'
+                });
+            } else if (result.status === 'Approved') {
+                state.approved++;
+                state.hits.unshift({
+                    card: cardNum,
+                    fullCard: fullCard,
+                    exp: result.exp || 'N/A',
+                    cvv: result.cvv || 'N/A',
+                    amount: result.price_value || 0,
+                    status: 'APPROVED',
+                    time: new Date().toLocaleTimeString(),
+                    date: new Date().toLocaleString(),
+                    type: result.gateway || 'Shopify Payments',
+                    responseType: result.responseType || 'APPROVED',
+                    gateway: result.gateway || 'Shopify Payments',
+                    price: result.price || '-',
+                    site: result.site || 'Unknown',  // ✅ SAVE SITE
+                    bank: binInfo.bank || '-',
+                    country: binInfo.country ? binInfo.country + ' ' + binInfo.flag : '-',
+                    brand: binInfo.brand || '-',
+                    cardType: binInfo.type || '-',
+                    cardLevel: binInfo.level || '-'
+                });
+            } else {
+                state.declined++;
+                // ✅ STILL SAVE THE SITE FOR DECLINED CARDS
+                result.site = result.site || 'Unknown';
+            }
+            state.totalHits++;
+            massResults.push(result);
+        }
+        
+        massCurrentIndex = Math.min(i + batchSize, total);
+        const pct = Math.round((massCurrentIndex / total) * 100);
+        els.massStatus.textContent = pct + '%';
+        els.massProgressFill.style.width = pct + '%';
+        els.massProgressText.textContent = `${massCurrentIndex}/${total} (${pct}%)`;
+        els.massStatusIndicator.textContent = massPaused ? '⏸️ Paused' : '🔄 Running';
+        els.massStatusIndicator.className = `status-indicator ${massPaused ? 'paused' : 'running'}`;
+        
+        let charged = 0, approved = 0, dead = 0;
+        massResults.forEach(r => {
+            if (r.status === 'Charged') charged++;
+            else if (r.status === 'Approved') approved++;
+            else dead++;
+        });
+        els.massChargedCount.textContent = charged;
+        els.massApprovedCount.textContent = approved;
+        els.massDeadCount.textContent = dead;
+        
+        renderMassResults();
+        updateMassFilterCounts();
+        updateStats();
+        renderHits();
+        
+        if (!massStopRequested) await new Promise(r => setTimeout(r, 30));
+    }
+    
+    if (!massStopRequested && massCurrentIndex >= total) {
+        massRunning = false;
+        updateMassUI('stopped');
+        els.massStatusIndicator.textContent = '✅ Complete!';
+        els.massStatusIndicator.className = 'status-indicator complete';
+        els.massProgressText.textContent = `${total}/${total} (100%)`;
+        els.massStatus.textContent = '✅ Complete! (' + total + ' cards)';
+        els.massProgressFill.style.width = '100%';
+        renderMassResults();
+        updateMassFilterCounts();
+        logDebug(`✅ Mass check COMPLETE! ${total} cards processed`, 'success');
+    }
+}
 
         function updateMassUI(status) {
             els.massStartBtn.disabled = status === 'running' || status === 'paused';
