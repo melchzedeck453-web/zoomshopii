@@ -2140,51 +2140,91 @@
         // 🔥 FIXED: TEST SITE WITH PRICE - Handles objects
         // ================================================================
         async function testSiteWithPrice(site, proxy) {
-            // 🔥 FIX: Handle site as object or string
-            if (typeof site === 'object' && site !== null) {
-                site = site.url || site.toString();
+    // Handle site as object or string
+    if (typeof site === 'object' && site !== null) {
+        site = site.url || site.toString();
+    }
+    if (typeof site !== 'string') {
+        site = String(site);
+    }
+    
+    try {
+        if (!site.startsWith('http')) site = 'https://' + site;
+        
+        let proxyStr = proxy;
+        if (proxy) {
+            if (typeof proxy === 'object' && proxy !== null) {
+                proxyStr = proxy.proxy || proxy.toString();
             }
-            if (typeof site !== 'string') {
-                site = String(site);
+            if (typeof proxyStr !== 'string') {
+                proxyStr = String(proxyStr);
             }
-            
-            try {
-                if (!site.startsWith('http')) site = 'https://' + site;
-                
-                let proxyStr = proxy;
-                if (proxy) {
-                    if (typeof proxy === 'object' && proxy !== null) {
-                        proxyStr = proxy.proxy || proxy.toString();
-                    }
-                    if (typeof proxyStr !== 'string') {
-                        proxyStr = String(proxyStr);
-                    }
-                    const proxyParts = proxyStr.split(':');
-                    if (proxyParts.length === 4) {
-                        proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
-                    } else if (proxyParts.length === 2) {
-                        proxyStr = `${proxyParts[0]}:${proxyParts[1]}`;
-                    }
-                }
-                if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
-                
-                const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
-                const url = `${apiBase}/check?site=${site}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}`;
-                const response = await fetch(url, {
-                    headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
-                });
-                if (!response.ok) return { site: site, status: 'dead', price: 0 };
-                const raw = await response.json();
-                if (raw.valid === true) {
-                    const priceValue = getPriceFromResponse(raw);
-                    return { site: site, status: 'alive', price: priceValue };
-                } else if (raw.valid === false) {
-                    return { site: site, status: 'dead', price: 0 };
-                }
-                return { site: site, status: 'dead', price: 0 };
-            } catch { return { site: site, status: 'dead', price: 0 }; }
+            const proxyParts = proxyStr.split(':');
+            if (proxyParts.length === 4) {
+                proxyStr = `${proxyParts[0]}:${proxyParts[1]}:${proxyParts[2]}:${proxyParts[3]}`;
+            } else if (proxyParts.length === 2) {
+                proxyStr = `${proxyParts[0]}:${proxyParts[1]}`;
+            }
         }
-
+        if (!proxyStr) proxyStr = CONFIG.DEFAULT_PROXY;
+        
+        // ✅ FIX: Add test card to the request
+        const testCard = "4111111111111111|12|26|123";
+        const apiBase = CONFIG.API_SERVERS[Math.floor(Math.random() * CONFIG.API_SERVERS.length)];
+        const url = `${apiBase}/check?site=${site}&cc=${testCard}&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}`;
+        
+        logDebug(`🔍 Testing site: ${site}`, 'info');
+        
+        const response = await fetch(url, {
+            headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
+        });
+        
+        if (!response.ok) {
+            logDebug(`❌ Site test failed: HTTP ${response.status}`, 'error');
+            return { site: site, status: 'dead', price: 0, product: null };
+        }
+        
+        const raw = await response.json();
+        logDebug(`📄 Site response: ${JSON.stringify(raw).substring(0, 200)}`, 'raw');
+        
+        // ✅ CHECK FOR PRODUCT - if valid and has product
+        if (raw.valid === true) {
+            const product = raw.product || raw.Product || null;
+            const price = raw.price || raw.Price || 0;
+            
+            // ✅ ONLY ADD IF PRODUCT EXISTS
+            if (product && product !== 'null' && product !== 'undefined' && product.trim() !== '' && product !== 'NO_PRODUCT') {
+                logDebug(`✅ Site ALIVE with product: ${product} - $${price}`, 'success');
+                return {
+                    site: site,
+                    status: 'alive',
+                    price: parseFloat(price) || 0,
+                    product: product,
+                    gateway: raw.gate || raw.Gate || 'Shopify Payments',
+                    card_response: raw.card_response || raw.Response || ''
+                };
+            } else {
+                logDebug(`⚠️ Site has NO product: ${site} (${raw.reason || 'NO_CHEAP_PRODUCTS'})`, 'warning');
+                return { site: site, status: 'dead', price: 0, product: null };
+            }
+        } else if (raw.valid === false) {
+            logDebug(`❌ Site is dead: ${site}`, 'error');
+            return { site: site, status: 'dead', price: 0, product: null };
+        }
+        
+        // Check for throttled or no product
+        if (raw.reason === 'THROTTLED' || raw.reason === 'NO_CHEAP_PRODUCTS') {
+            logDebug(`⚠️ Site ${raw.reason}: ${site}`, 'warning');
+            return { site: site, status: 'dead', price: 0, product: null };
+        }
+        
+        return { site: site, status: 'dead', price: 0, product: null };
+    } catch (error) {
+        logDebug(`❌ Site test error: ${error.message}`, 'error');
+        return { site: site, status: 'dead', price: 0, product: null };
+    }
+}
+        
         // ================================================================
         // PROGRESS FILTERS
         // ================================================================
