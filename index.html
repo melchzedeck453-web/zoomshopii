@@ -2238,25 +2238,34 @@
         });
 
         function renderQuickResults() {
-            let filtered = quickResults;
-            if (quickFilter === 'charged') filtered = quickResults.filter(r => r.status === 'Charged');
-            else if (quickFilter === 'approved') filtered = quickResults.filter(r => r.status === 'Approved');
-            else if (quickFilter === 'declined') filtered = quickResults.filter(r => r.status !== 'Charged' && r.status !== 'Approved');
-            if (filtered.length === 0) {
-                els.quickResultsList.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:20px;">No results for this filter</div>`;
-                return;
-            }
-            els.quickResultsList.innerHTML = filtered.map(r => {
-                const statusClass = (r.status === 'Charged' || r.status === 'Approved') ? 'approved' : 'dead';
-                return `<div class="result-item ${statusClass}">
-                    <span>${r.card || 'Unknown'}</span>
-                    <span>${r.price || '-'}</span>
-                    <span>${r.gateway || 'Unknown'}</span>
-                    <span class="status-badge ${statusClass}">${r.status}</span>
-                </div>`;
-            }).join('');
-        }
-
+    let filtered = quickResults;
+    if (quickFilter === 'charged') filtered = quickResults.filter(r => r.status === 'Charged');
+    else if (quickFilter === 'approved') filtered = quickResults.filter(r => r.status === 'Approved');
+    else if (quickFilter === 'declined') filtered = quickResults.filter(r => r.status !== 'Charged' && r.status !== 'Approved');
+    
+    if (filtered.length === 0) {
+        els.quickResultsList.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:20px;">No results for this filter</div>`;
+        return;
+    }
+    
+    els.quickResultsList.innerHTML = filtered.map(r => {
+        const statusClass = (r.status === 'Charged' || r.status === 'Approved') ? 'approved' : 'dead';
+        const siteDisplay = r.site || r.site_url || 'Unknown';
+        const siteShort = siteDisplay.length > 50 ? siteDisplay.slice(0, 50) + '...' : siteDisplay;
+        
+        return `<div class="result-item ${statusClass}" style="flex-direction:column;align-items:flex-start;padding:8px 12px;">
+            <div style="display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:4px;">
+                <span style="font-weight:bold;">${r.card || 'Unknown'}</span>
+                <span>${r.price || '-'}</span>
+                <span>${r.gateway || 'Unknown'}</span>
+                <span class="status-badge ${statusClass}">${r.status}</span>
+            </div>
+            <div style="font-size:0.6rem;color:var(--text-dim);margin-top:4px;width:100%;border-top:1px solid var(--border-color);padding-top:4px;">
+                🌐 Site: <span style="color:var(--text-gray);">${siteShort}</span>
+            </div>
+        </div>`;
+    }).join('');
+}
         document.querySelectorAll('#massFilterContainer .progress-filter-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('#massFilterContainer .progress-filter-btn').forEach(b => b.classList.remove('active'));
@@ -2267,25 +2276,34 @@
         });
 
         function renderMassResults() {
-            let filtered = massResults;
-            if (massFilter === 'charged') filtered = massResults.filter(r => r.status === 'Charged');
-            else if (massFilter === 'approved') filtered = massResults.filter(r => r.status === 'Approved');
-            else if (massFilter === 'declined') filtered = massResults.filter(r => r.status !== 'Charged' && r.status !== 'Approved');
-            if (filtered.length === 0) {
-                els.massResultsList.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:20px;">No results for this filter</div>`;
-                return;
-            }
-            els.massResultsList.innerHTML = filtered.map(r => {
-                const statusClass = (r.status === 'Charged' || r.status === 'Approved') ? 'approved' : 'dead';
-                return `<div class="result-item ${statusClass}">
-                    <span>${r.card || 'Unknown'}</span>
-                    <span>${r.price || '-'}</span>
-                    <span>${r.gateway || 'Unknown'}</span>
-                    <span class="status-badge ${statusClass}">${r.status}</span>
-                </div>`;
-            }).join('');
-        }
-
+    let filtered = massResults;
+    if (massFilter === 'charged') filtered = massResults.filter(r => r.status === 'Charged');
+    else if (massFilter === 'approved') filtered = massResults.filter(r => r.status === 'Approved');
+    else if (massFilter === 'declined') filtered = massResults.filter(r => r.status !== 'Charged' && r.status !== 'Approved');
+    
+    if (filtered.length === 0) {
+        els.massResultsList.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:20px;">No results for this filter</div>`;
+        return;
+    }
+    
+    els.massResultsList.innerHTML = filtered.map(r => {
+        const statusClass = (r.status === 'Charged' || r.status === 'Approved') ? 'approved' : 'dead';
+        const siteDisplay = r.site || r.site_url || 'Unknown';
+        const siteShort = siteDisplay.length > 50 ? siteDisplay.slice(0, 50) + '...' : siteDisplay;
+        
+        return `<div class="result-item ${statusClass}" style="flex-direction:column;align-items:flex-start;padding:8px 12px;">
+            <div style="display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:4px;">
+                <span style="font-weight:bold;">${r.card || 'Unknown'}</span>
+                <span>${r.price || '-'}</span>
+                <span>${r.gateway || 'Unknown'}</span>
+                <span class="status-badge ${statusClass}">${r.status}</span>
+            </div>
+            <div style="font-size:0.6rem;color:var(--text-dim);margin-top:4px;width:100%;border-top:1px solid var(--border-color);padding-top:4px;">
+                🌐 Site: <span style="color:var(--text-gray);">${siteShort}</span>
+            </div>
+        </div>`;
+    }).join('');
+}
         // ================================================================
         // HITS FILTERS
         // ================================================================
