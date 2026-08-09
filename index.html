@@ -1342,26 +1342,44 @@
             }
         }
 
-        async function testProxy() {
-            logDebug('🔍 Testing proxy...', 'info');
-            const proxy = CONFIG.DEFAULT_PROXY;
-            logDebug(`🔌 Proxy: ${proxy.substring(0, 30)}...`, 'info');
+        async function testProxy(proxyInput) {
+            // if called with no argument (debug button) → use default
+            let proxyStr = proxyInput;
+            if (!proxyStr) {
+                proxyStr = CONFIG.DEFAULT_PROXY;
+                logDebug('🔍 Testing default proxy...', 'info');
+            }
+
+            // handle object
+            if (typeof proxyStr === 'object' && proxyStr !== null) {
+                proxyStr = proxyStr.proxy || String(proxyStr);
+            }
+            if (typeof proxyStr !== 'string') proxyStr = String(proxyStr);
+
+            logDebug(`🔌 Testing proxy: ${proxyStr.substring(0, 40)}...`, 'info');
+
             try {
-                const url = CONFIG.API_SERVERS[0] + '/check?site=shopify.com&key=' + CONFIG.CHECKER_API_KEY + '&proxy=' + encodeURIComponent(proxy);
-                logDebug(`📡 Testing: ${url.substring(0, 80)}...`, 'info');
-                const response = await fetch(url, {
-                    headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' }
+                const testUrl = `${CONFIG.API_SERVERS[0]}/check?site=shopify.com&key=${CONFIG.CHECKER_API_KEY}&proxy=${encodeURIComponent(proxyStr)}`;
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch(testUrl, {
+                    headers: { 'User-Agent': CONFIG.ANDROID_UA, 'Accept': 'application/json' },
+                    signal: controller.signal
                 });
-                logDebug(`📡 Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                clearTimeout(timeoutId);
+
                 if (response.ok) {
-                    const data = await response.json();
-                    logDebug(`📄 Response: ${JSON.stringify(data).substring(0, 150)}`, 'raw');
-                    logDebug('✅ Proxy test completed!', 'success');
+                    logDebug(`✅ Proxy responded OK`, 'success');
+                    return { proxy: proxyStr, status: 'alive' };
                 } else {
-                    logDebug('❌ Proxy test failed!', 'error');
+                    logDebug(`❌ Proxy test failed: HTTP ${response.status}`, 'error');
+                    return { proxy: proxyStr, status: 'dead' };
                 }
             } catch (error) {
                 logDebug(`❌ Proxy test ERROR: ${error.message}`, 'error');
+                return { proxy: proxyStr || 'unknown', status: 'dead' };
             }
         }
 
@@ -1608,14 +1626,14 @@
                     <div class="hit-info">
                         <span class="hit-card">${h.fullCard || h.card} <span class="status-badge ${h.status.toLowerCase()}">${h.status}</span></span>
                         <div class="hit-details">
-                            ${h.responseType || h.type || '3DS_REQUIRED'} 
-                            ${h.bank ? '| 🏦 ' + h.bank : ''} 
-                            ${h.country ? '| ' + h.country : ''}
-                            ${h.brand ? '| 💳 ' + h.brand : ''}
-                            ${h.cardType ? '| ' + h.cardType : ''}
-                            ${h.cardLevel ? '| ' + h.cardLevel : ''}
-                            ${h.gateway ? '| 🛒 ' + h.gateway : ''}
-                            ${h.price ? '| 💰 $' + h.price : ''}
+                            ${h.responseType || h.type || '3DS_REQUIRED'}
+                            ${h.bank && h.bank !== '-' ? ' | 🏦 ' + h.bank : ''}
+                            ${h.country && h.country !== '-' ? ' | ' + h.country : ''}
+                            ${h.brand && h.brand !== '-' ? ' | 💳 ' + h.brand : ''}
+                            ${h.cardType && h.cardType !== '-' ? ' | ' + h.cardType : ''}
+                            ${h.cardLevel && h.cardLevel !== '-' ? ' | ' + h.cardLevel : ''}
+                            ${h.gateway ? ' | 🛒 ' + h.gateway : ''}
+                            ${h.price && h.price !== '-' ? ' | 💰 ' + h.price : ''}
                         </div>
                         <span class="hit-time">${h.date || new Date().toLocaleString()}</span>
                     </div>
@@ -1653,8 +1671,10 @@
                 let price = '0.00';
                 let added = new Date().toLocaleDateString();
                 
-                if (typeof s === 'object') {
-                    siteUrl = s.url || s;
+                if (typeof s === 'object' && s !== null) {
+                    siteUrl = (typeof s.url === 'string') ? s.url : (s.url ? String(s.url) : String(s));
+                    // never allow [object Object]
+                    if (siteUrl === '[object Object]') siteUrl = 'unknown-site';
                     status = s.status || 'ALIVE';
                     price = s.price || '0.00';
                     added = s.added || new Date().toLocaleDateString();
@@ -1711,8 +1731,9 @@
                 let latency = 'N/A';
                 let added = new Date().toLocaleDateString();
                 
-                if (typeof p === 'object') {
-                    proxyStr = p.proxy || p;
+                if (typeof p === 'object' && p !== null) {
+                    proxyStr = (typeof p.proxy === 'string') ? p.proxy : (p.proxy ? String(p.proxy) : String(p));
+                    if (proxyStr === '[object Object]') proxyStr = 'unknown-proxy';
                     status = p.status || 'ALIVE';
                     latency = p.latency || 'N/A';
                     added = p.added || new Date().toLocaleDateString();
@@ -1776,29 +1797,45 @@
         }
 
         async function retestSite(index) {
-            const site = state.sites[index];
-            if (!site) return;
-            
+            const siteObj = state.sites[index];
+            if (!siteObj) return;
+
+            // always extract the real string
+            const siteUrl = typeof siteObj === 'object' ? (siteObj.url || String(siteObj)) : siteObj;
+
             if (state.proxies.length === 0) {
                 alert('❌ No proxies available to test!');
                 return;
             }
-            
-            const proxy = state.proxies[Math.floor(Math.random() * state.proxies.length)];
-            logDebug(`🔄 Retesting site: ${site}`, 'info');
-            const result = await testSiteWithPrice(site, proxy);
-            
+
+            const proxyObj = state.proxies[Math.floor(Math.random() * state.proxies.length)];
+            const proxy = typeof proxyObj === 'object' ? (proxyObj.proxy || String(proxyObj)) : proxyObj;
+
+            logDebug(`🔄 Retesting site: ${siteUrl}`, 'info');
+            const result = await testSiteWithPrice(siteUrl, proxy);
+
             if (result.status === 'alive') {
-                state.sites[index] = { url: site, status: 'ALIVE', price: result.price.toFixed(2), added: new Date().toLocaleDateString() };
-                logDebug(`✅ Site ALIVE: ${site} - $${result.price.toFixed(2)}`, 'success');
-                alert('✅ Site is ALIVE! Price: $' + result.price.toFixed(2));
+                state.sites[index] = {
+                    url: siteUrl,
+                    status: 'ALIVE',
+                    price: (result.price || 0).toFixed(2),
+                    added: new Date().toLocaleDateString()
+                };
+                logDebug(`✅ Site ALIVE: ${siteUrl} - $${result.price}`, 'success');
+                alert('✅ Site is ALIVE! Price: $' + (result.price || 0).toFixed(2));
             } else {
-                state.sites[index] = { url: site, status: 'DEAD', price: '0.00', added: new Date().toLocaleDateString() };
-                logDebug(`❌ Site DEAD: ${site}`, 'error');
+                state.sites[index] = {
+                    url: siteUrl,
+                    status: 'DEAD',
+                    price: '0.00',
+                    added: new Date().toLocaleDateString()
+                };
+                logDebug(`❌ Site DEAD: ${siteUrl}`, 'error');
                 alert('❌ Site is DEAD!');
             }
             renderSites();
             updateStats();
+            saveState();
         }
 
         // ===== PROXY ACTIONS =====
@@ -1810,26 +1847,41 @@
         }
 
         async function retestProxy(index) {
-            const proxy = state.proxies[index];
-            if (!proxy) return;
-            
-            logDebug(`🔄 Retesting proxy: ${proxy.substring(0, 30)}...`, 'info');
+            const proxyObj = state.proxies[index];
+            if (!proxyObj) return;
+
+            // always extract the real string
+            const proxyStr = typeof proxyObj === 'object' ? (proxyObj.proxy || String(proxyObj)) : proxyObj;
+
+            logDebug(`🔄 Retesting proxy: ${proxyStr.substring(0, 40)}...`, 'info');
+
             const startTime = performance.now();
-            const result = await testProxy(proxy);
+            const result = await testProxy(proxyStr);
             const endTime = performance.now();
-            const latency = (endTime - startTime).toFixed(1);
-            
+            const latency = (endTime - startTime).toFixed(0);
+
             if (result.status === 'alive') {
-                state.proxies[index] = { proxy: proxy, status: 'ALIVE', latency: latency + 'ms', added: new Date().toLocaleDateString() };
-                logDebug(`✅ Proxy ALIVE: ${proxy.substring(0, 30)}... - ${latency}ms`, 'success');
+                state.proxies[index] = {
+                    proxy: proxyStr,
+                    status: 'ALIVE',
+                    latency: latency + 'ms',
+                    added: new Date().toLocaleDateString()
+                };
+                logDebug(`✅ Proxy ALIVE: ${proxyStr.substring(0, 30)}... - ${latency}ms`, 'success');
                 alert('✅ Proxy is ALIVE! Latency: ' + latency + 'ms');
             } else {
-                state.proxies[index] = { proxy: proxy, status: 'DEAD', latency: 'N/A', added: new Date().toLocaleDateString() };
-                logDebug(`❌ Proxy DEAD: ${proxy.substring(0, 30)}...`, 'error');
+                state.proxies[index] = {
+                    proxy: proxyStr,
+                    status: 'DEAD',
+                    latency: 'N/A',
+                    added: new Date().toLocaleDateString()
+                };
+                logDebug(`❌ Proxy DEAD: ${proxyStr.substring(0, 30)}...`, 'error');
                 alert('❌ Proxy is DEAD!');
             }
             renderProxies();
             updateStats();
+            saveState();
         }
 
         // ===== VALIDATE CARD =====
@@ -1914,40 +1966,40 @@
         // ===== IS SITE DEAD =====
         function isSiteDead(responseMsg, gateway, price) {
             if (!responseMsg) return true;
-            if (!gateway || gateway === "Unknown") return true;
-            if (!gateway.includes("Shopify")) return true;
-            const priceStr = String(price);
-            if (["-", "$-", "$0", "$0.0", "0", "$0.00"].includes(priceStr)) return true;
+
             const r = responseMsg.toLowerCase();
-            const deadKeywords = [
+
+            // Real site-level failures only
+            const realDeadKeywords = [
                 'receipt id is empty', 'handle is empty', 'product id is empty',
                 'tax amount is empty', 'payment method identifier is empty',
-                'invalid url', 'error in 1st req', 'cloudflare', 'connection failed',
-                'timed out', 'access denied', 'tlsv1 alert', 'ssl routines',
+                'invalid url', 'error in 1st req', 'cloudflare',
                 'could not resolve', 'domain name not found',
                 'name or service not known', 'openssl ssl_connect',
-                'empty reply from server', 'httperror504', 'http error',
-                'timeout', 'unreachable', 'ssl error',
-                '502', '503', '504', 'bad gateway', 'service unavailable',
-                'gateway timeout', 'network error', 'connection reset',
+                'empty reply from server',
                 'failed to detect product', 'failed to create checkout',
                 'failed to tokenize card', 'failed to get proposal data',
-                'submit rejected', 'handle error', 'http 404',
-                'delivery_delivery_line_detail_changed', 'delivery_address2_required',
-                'url rejected', 'malformed input', 'amount_too_small', 'amount too small',
+                'url rejected', 'malformed input',
                 'site dead', 'captcha_required', 'captcha required',
                 'site errors', 'not supported', 'unsupported',
                 'invalid site', 'connection refused', 'forbidden',
-                'no response', 'host not found', 'domain not found',
-                'could not connect', 'connection error', 'request timeout',
-                'gateway error', 'internal server error', 'server error',
-                'page not found', 'not found', 'http 500', 'http 502',
-                'http 503', 'http 504', 'cloudflare error', 'cf-error',
-                'cf-ray', 'challenge required', 'blocked', 'access blocked'
+                'host not found', 'domain not found',
+                'page not found', 'http 404',
+                'http 500', 'http 502', 'http 503', 'http 504',
+                'cloudflare error', 'cf-error', 'cf-ray',
+                'blocked', 'access blocked', 'access denied'
             ];
-            for (const kw of deadKeywords) {
+
+            for (const kw of realDeadKeywords) {
                 if (r.includes(kw)) return true;
             }
+
+            // Only mark dead if price is zero AND gateway is completely missing
+            if ((!gateway || gateway === "Unknown" || gateway === "UNKNOWN") && 
+                (price === '-' || price === '$0' || price === '0' || price === 0 || price === '$-')) {
+                return true;
+            }
+
             return false;
         }
 
@@ -2027,9 +2079,13 @@
         const priceDisplay = (price !== '-' && price !== 0) ? `$${price}` : '-';
         const gateway = raw.Gate || raw.Gateway || raw.gate || 'Shopify Payments';
         
-        // Check for throttled or no product
-        if (responseMsg.includes('THROTTLED') || responseMsg.includes('NO_PRODUCT')) {
-            logDebug(`⚠️ API returned: ${responseMsg}`, 'warning');
+        // Soft / temporary errors → retry, do NOT kill the site
+        const softErrors = [
+            'TIMEOUT', 'CART_FAILED', 'THROTTLED', 'NO_PRODUCT',
+            'RATE_LIMIT', 'TOO_MANY_REQUESTS', 'NETWORK_ERROR'
+        ];
+        if (softErrors.some(e => responseMsg.toUpperCase().includes(e))) {
+            logDebug(`⚠️ Soft error (${responseMsg}) → retry`, 'warning');
             return {
                 status: 'Site Error',
                 message: responseMsg,
@@ -2371,19 +2427,20 @@
                     const cardData = parseCardLine(line);
                     if (!cardData) return null;
                     const result = await checkCardWithRetry(cardData.raw, 4);
-                    if (result.card && !result.card.includes('|')) {
-                        const parts = result.card.split('|');
-                        if (parts.length === 4) result.card = parts[0];
-                    }
+                    // keep original full card, extract pure number for BIN
                     return result;
-                }));
+                });
                 
                 for (const result of results) {
                     if (!result) continue;
                     
-                    const cardNum = result.card || 'Unknown';
+                    let pureCard = result.card || '';
+                    if (pureCard.includes('|')) {
+                        pureCard = pureCard.split('|')[0].trim();
+                    }
+                    const cardNum = pureCard || 'Unknown';
                     const binInfo = await getBinInfo(cardNum);
-                    const fullCard = result.card || 'Unknown';
+                    const fullCard = result.card || cardNum;
                     
                     if (result.status === 'Charged') {
                         state.charged++;
@@ -2569,10 +2626,7 @@
             const cardData = parseCardLine(line);
             if (!cardData) return null;
             const result = await checkCardWithRetry(cardData.raw, 4);
-            if (result.card && !result.card.includes('|')) {
-                const parts = result.card.split('|');
-                if (parts.length === 4) result.card = parts[0];
-            }
+            // keep original full card, extract pure number for BIN
             // ✅ FIX: Ensure site is preserved
             if (!result.site) {
                 result.site = 'Unknown';
@@ -2586,9 +2640,13 @@
             // ✅ DEBUG: Log the site to see if it's being preserved
             logDebug(`📊 Result: ${result.card} - ${result.status} - Site: ${result.site || 'Unknown'}`, 'info');
             
-            const cardNum = result.card || 'Unknown';
+            let pureCard = result.card || '';
+            if (pureCard.includes('|')) {
+                pureCard = pureCard.split('|')[0].trim();
+            }
+            const cardNum = pureCard || 'Unknown';
             const binInfo = await getBinInfo(cardNum);
-            const fullCard = result.card || 'Unknown';
+            const fullCard = result.card || cardNum;
             
             if (result.status === 'Charged') {
                 state.charged++;
