@@ -2429,7 +2429,7 @@
                     const result = await checkCardWithRetry(cardData.raw, 4);
                     // keep original full card, extract pure number for BIN
                     return result;
-                });
+                }));
                 
                 for (const result of results) {
                     if (!result) continue;
