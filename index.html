@@ -2937,6 +2937,7 @@
                 state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
                 renderSites();
                 updateStats();
+                saveState();
                 logDebug(`🌐 Added ${urls.length} sites`, 'info');
                 alert(`✅ ${urls.length} sites added! Total: ${state.sites.length}`);
                 els.siteFileInput.value = '';
@@ -2958,6 +2959,7 @@
             state.sites = [...new Map(state.sites.map(item => [item.url, item])).values()];
             renderSites();
             updateStats();
+            saveState();
             logDebug(`🌐 Added ${urls.length} manual sites`, 'info');
             alert(`✅ ${urls.length} sites added! Total: ${state.sites.length}`);
             els.manualSites.value = '';
@@ -2986,13 +2988,23 @@
         
         if (result.status === 'alive') {
             alive++;
-            // ✅ Site is alive - keep it in the list (do nothing)
+            // ✅ Update price immediately and keep the site
+            state.sites[i] = {
+                url: siteUrl,
+                status: 'ALIVE',
+                price: (result.price || 0).toFixed(2),
+                added: (typeof site === 'object' && site.added) ? site.added : new Date().toLocaleDateString()
+            };
+            renderSites();
+            updateStats();
+            saveState();
         } else {
             dead++;
             // 🔥 IMMEDIATELY REMOVE the dead site from the SAME list
             state.sites.splice(i, 1);
-            renderSites();   // Update UI immediately
-            updateStats();    // Update stats immediately
+            renderSites();
+            updateStats();
+            saveState();
         }
         
         const pct = Math.round((checked / total) * 100);
@@ -3069,6 +3081,7 @@
                 state.proxies = [...new Map(state.proxies.map(item => [item.proxy, item])).values()];
                 renderProxies();
                 updateStats();
+                saveState();
                 logDebug(`🔌 Added ${validProxies.length} proxies`, 'info');
                 alert(`✅ ${validProxies.length} proxies added! Total: ${state.proxies.length}`);
                 els.proxyFileInput.value = '';
@@ -3103,6 +3116,7 @@
             state.proxies = [...new Map(state.proxies.map(item => [item.proxy, item])).values()];
             renderProxies();
             updateStats();
+            saveState();
             logDebug(`🔌 Added ${validProxies.length} manual proxies`, 'info');
             alert(`✅ ${validProxies.length} proxies added! Total: ${state.proxies.length}`);
             els.manualProxies.value = '';
@@ -3121,19 +3135,25 @@
 
             for (const proxy of state.proxies) {
                 const proxyStr = typeof proxy === 'object' ? proxy.proxy : proxy;
+                const startTime = performance.now();
                 const result = await testProxy(proxyStr);
+                const latency = (performance.now() - startTime).toFixed(0) + 'ms';
                 if (result.status === 'alive') {
                     aliveProxies.push({
                         proxy: proxyStr,
                         status: 'ALIVE',
-                        latency: 'N/A',
-                        added: new Date().toLocaleDateString()
+                        latency: latency,
+                        added: (typeof proxy === 'object' && proxy.added) ? proxy.added : new Date().toLocaleDateString()
                     });
                     alive++;
                 } else {
                     dead++;
                 }
                 checked++;
+                // live update the list so latency appears immediately
+                state.proxies = [...aliveProxies];
+                renderProxies();
+                updateStats();
                 const pct = Math.round((checked / total) * 100);
                 els.proxyCheckStatus.textContent = pct + '%';
                 els.proxyCheckFill.style.width = pct + '%';
@@ -3147,6 +3167,7 @@
             state.proxies = aliveProxies;
             renderProxies();
             updateStats();
+            saveState();
 
             els.proxyCheckStatus.textContent = '✅ Complete!';
             els.proxyCheckFill.style.width = '100%';
