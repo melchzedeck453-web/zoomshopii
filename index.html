@@ -1405,11 +1405,23 @@
 
         // ===== LOAD/SAVE =====
         function loadState() {
-            const saved = localStorage.getItem('zoomShopiiState');
-            if (saved) { try { state = JSON.parse(saved); } catch(e) {} }
+            try {
+                if (typeof localStorage === 'undefined') return;
+                const saved = localStorage.getItem('zoomShopiiState');
+                if (saved) {
+                    try { state = JSON.parse(saved); } catch(e) {}
+                }
+            } catch (e) {
+                // sandboxed / blocked — ignore
+            }
         }
         function saveState() {
-            localStorage.setItem('zoomShopiiState', JSON.stringify(state));
+            try {
+                if (typeof localStorage === 'undefined') return;
+                localStorage.setItem('zoomShopiiState', JSON.stringify(state));
+            } catch (e) {
+                // sandboxed / blocked — ignore
+            }
         }
 
         // ===== CONFIRM DIALOG =====
